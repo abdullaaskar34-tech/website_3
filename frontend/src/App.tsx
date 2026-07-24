@@ -484,8 +484,25 @@ function App() {
     }
   };
 
-  const handleClientDownload = (filename: string, content: string) => {
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const handleClientDownload = async (filename: string, content: string) => {
+    let blob: Blob;
+    if (filename.endsWith('.xlsx')) {
+      const baseUrl = (import.meta as any).env?.BASE_URL || './';
+      try {
+        const res = await fetch(`${baseUrl}son_model/${filename}`.replace('//', '/'));
+        if (res.ok) {
+          const buffer = await res.arrayBuffer();
+          blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        } else {
+          blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        }
+      } catch (e) {
+        blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      }
+    } else {
+      const mime = filename.endsWith('.json') ? 'application/json' : 'text/plain;charset=utf-8';
+      blob = new Blob([content], { type: mime });
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
