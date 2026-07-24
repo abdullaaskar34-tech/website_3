@@ -414,7 +414,8 @@ function App() {
     let alive = true;
     // Canonical coordinates from son_model/reference_tables/pca_projection_data.json
     // (copied into public/ for static serving). No sampling, no jitter.
-    fetch('./pca_projection_data.json')
+    const baseUrl = (import.meta as any).env?.BASE_URL || './';
+    fetch(`${baseUrl}pca_projection_data.json`.replace('//', '/'))
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (alive) setRefProjection(d); })
       .catch(() => {});
@@ -545,7 +546,8 @@ function App() {
         // Load bundled son_model reference metadata if available
         let sonModelFactors: any = null;
         try {
-          const refRes = await fetch('./son_model/voting_reliability_factors.json');
+          const baseUrl = (import.meta as any).env?.BASE_URL || './';
+          const refRes = await fetch(`${baseUrl}son_model/voting_reliability_factors.json`.replace('//', '/'));
           if (refRes.ok) sonModelFactors = await refRes.json();
         } catch (e) {
           // Non-critical fallback

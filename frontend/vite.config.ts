@@ -6,7 +6,7 @@ export default defineConfig({
   // Relative asset base. Harmless for the dev server (assets still resolve from
   // the current URL); mainly matters for `vite build` when not served from the
   // domain root.
-  base: './',
+  base: process.env.NODE_ENV === 'production' ? '/website_3/' : './',
   plugins: [react()],
   server: {
     // Host on all network interfaces so the app is reachable from other
