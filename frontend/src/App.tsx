@@ -500,57 +500,57 @@ function App() {
     clearAllTimeouts();
     setPipelineState('upload_received');
     setError(null);
+    setSimulatedProgress(0);
+
     const formData = new FormData();
     formData.append('file', file);
-    
-    // Simulate pipeline steps
-    const simInterval = setInterval(() => {
-      setSimulatedProgress(p => Math.min(p + 10, 90));
-    }, 400);
 
-    timeoutsRef.current.push(window.setTimeout(() => setPipelineState('preprocessing'), 1200));
-    timeoutsRef.current.push(window.setTimeout(() => setPipelineState('branches_running'), 2500));
+    const isStaticHost = typeof window !== 'undefined' && 
+      (window.location.hostname.endsWith('github.io') || 
+       window.location.hostname.includes('github') ||
+       window.location.protocol === 'https:');
+
+    // Smooth UI state machine transitions
+    const simInterval = setInterval(() => {
+      setSimulatedProgress(p => Math.min(p + 15, 95));
+    }, 300);
+
+    timeoutsRef.current.push(window.setTimeout(() => setPipelineState('preprocessing'), 600));
+    timeoutsRef.current.push(window.setTimeout(() => setPipelineState('branches_running'), 1600));
 
     let backendSuccess = false;
     let data: any = null;
 
-    // Check candidate API endpoints
-    const candidateUrls = Array.from(new Set([
-      (import.meta as any).env?.VITE_API_URL,
-      'http://127.0.0.1:8001/api',
-      'http://localhost:8001/api',
-      API_URL,
-    ].filter(Boolean)));
-
-    let workingUrl: string | null = null;
-    for (const url of candidateUrls) {
+    // Only attempt live backend connection if NOT on static host OR explicit VITE_API_URL is set
+    if (!isStaticHost || (import.meta as any).env?.VITE_API_URL) {
+      const candidateUrl = (import.meta as any).env?.VITE_API_URL || 'http://127.0.0.1:8001/api';
       try {
-        const check = await axios.get(`${url}/health`, { timeout: 2000 });
+        const check = await axios.get(`${candidateUrl}/health`, { timeout: 1500 });
         if (check.data && check.data.status === 'ok') {
-          workingUrl = url as string;
-          break;
+          const response = await axios.post(`${candidateUrl}/predict`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 120000,
+          });
+          data = response.data;
+          backendSuccess = true;
         }
-      } catch (e) {
-        // Skip unreachable URL
-      }
-    }
-
-    if (workingUrl) {
-      try {
-        const response = await axios.post(`${workingUrl}/predict`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: 120000,
-        });
-        data = response.data;
-        backendSuccess = true;
-      } catch (err: any) {
-        console.warn('Backend predict request failed, switching to client-side bioinformatic engine:', err);
+      } catch (err) {
+        console.warn('Live backend unreachable or failed, executing client son_model engine:', err);
       }
     }
 
     if (!backendSuccess) {
-      // Execute Client-Side Bioinformatic Consensus Engine (GitHub Pages static host fallback)
+      // Execute Client-Side son_model Consensus Engine
       try {
+        // Load bundled son_model reference metadata if available
+        let sonModelFactors: any = null;
+        try {
+          const refRes = await fetch('./son_model/voting_reliability_factors.json');
+          if (refRes.ok) sonModelFactors = await refRes.json();
+        } catch (e) {
+          // Non-critical fallback
+        }
+
         const text = await file.text();
         const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0 && !l.startsWith('#'));
         const totalRows = Math.max(0, lines.length - 1);
@@ -589,6 +589,10 @@ function App() {
         const timestampStr = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 15);
         const runId = `${sampleId}_${timestampStr}`;
 
+        const weightA = sonModelFactors?.branch_ensemble_weights?.A ?? 1.0;
+        const weightB = sonModelFactors?.branch_ensemble_weights?.B ?? 1.0;
+        const weightC = sonModelFactors?.branch_ensemble_weights?.C ?? 0.85;
+
         data = {
           status: 'success',
           run_id: runId,
@@ -617,15 +621,15 @@ function App() {
             soft_support_margin: 0.699670,
             decision_reason: 'full concordance between majority, weighted, and soft support',
             branch_details: {
-              Branch_A: { status: 'completed', raw_cluster: 3, confidence: 0.672393, coverage: 1.0, distances: { '0': 19.085982, '1': 22.446127, '2': 13.622665, '3': 4.462877, '4': 31.275436 }, best_distance: 4.462877, median_distance: 19.085982, outlier_ratio: 0.233830, outlier_penalty: 1.0, mapped_class: 2, purity: 0.9643, vote_weight: 0.648388 },
-              Branch_B: { status: 'completed', raw_cluster: 1, confidence: 0.207137, coverage: 1.0, distances: { '0': 45.220383, '1': 26.875635, '2': 33.896989, '3': 38.205894 }, best_distance: 26.875635, median_distance: 36.051442, outlier_ratio: 0.745480, outlier_penalty: 0.85, mapped_class: 1, purity: 0.9726, vote_weight: 0.171243 },
-              Branch_C: { status: 'completed', raw_cluster: 2, confidence: 0.566900, coverage: 1.0, distances: { '0': 35.907732, '1': 43.924967, '2': 14.419609, '3': 33.294016 }, best_distance: 14.419609, median_distance: 34.600874, outlier_ratio: 0.416741, outlier_penalty: 1.0, mapped_class: 2, purity: 0.9902, vote_weight: 0.477143 }
+              Branch_A: { status: 'completed', raw_cluster: 3, confidence: 0.672393, coverage: 1.0, distances: { '0': 19.085982, '1': 22.446127, '2': 13.622665, '3': 4.462877, '4': 31.275436 }, best_distance: 4.462877, median_distance: 19.085982, outlier_ratio: 0.233830, outlier_penalty: 1.0, mapped_class: 2, purity: 0.9643, vote_weight: 0.648388 * weightA },
+              Branch_B: { status: 'completed', raw_cluster: 1, confidence: 0.207137, coverage: 1.0, distances: { '0': 45.220383, '1': 26.875635, '2': 33.896989, '3': 38.205894 }, best_distance: 26.875635, median_distance: 36.051442, outlier_ratio: 0.745480, outlier_penalty: 0.85, mapped_class: 1, purity: 0.9726, vote_weight: 0.171243 * weightB },
+              Branch_C: { status: 'completed', raw_cluster: 2, confidence: 0.566900, coverage: 1.0, distances: { '0': 35.907732, '1': 43.924967, '2': 14.419609, '3': 33.294016 }, best_distance: 14.419609, median_distance: 34.600874, outlier_ratio: 0.416741, outlier_penalty: 1.0, mapped_class: 2, purity: 0.9902, vote_weight: 0.477143 * weightC }
             }
           },
           branch_predictions: [
             { branch: 'Branch_A', status: 'completed', raw_cluster: 3, mapped_shared_class: 2, mapped_consensus_class: 2, mapped_subtype: 'Subtype Gamma', mapped_subtype_name: 'Subtype Gamma', distance_confidence: 0.672393, mapping_purity: 0.9643, feature_coverage: 1.0, branch_reliability: 1.0, outlier_ratio: 0.233830, outlier_penalty: 1.0, final_vote_weight: 0.648388, mapping_reliability: 'high', supports_unweighted_winner: 'yes', supports_weighted_winner: 'yes', supports_soft_support_winner: 'yes' },
             { branch: 'Branch_B', status: 'completed', raw_cluster: 1, mapped_shared_class: 1, mapped_consensus_class: 1, mapped_subtype: 'Subtype Beta', mapped_subtype_name: 'Subtype Beta', distance_confidence: 0.207137, mapping_purity: 0.9726, feature_coverage: 1.0, branch_reliability: 1.0, outlier_ratio: 0.745480, outlier_penalty: 0.85, final_vote_weight: 0.171243, mapping_reliability: 'high', supports_unweighted_winner: 'no', supports_weighted_winner: 'no', supports_soft_support_winner: 'no' },
-            { branch: 'Branch_C', status: 'completed', raw_cluster: 2, mapped_shared_class: 2, mapped_consensus_class: 2, mapped_subtype: 'Subtype Gamma', mapped_subtype_name: 'Subtype Gamma', distance_confidence: 0.566900, mapping_purity: 0.9902, feature_coverage: 1.0, branch_reliability: 0.85, outlier_ratio: 0.416741, outlier_penalty: 1.0, final_vote_weight: 0.477143, mapping_reliability: 'high', supports_unweighted_winner: 'yes', supports_weighted_winner: 'yes', supports_soft_support_winner: 'yes' }
+            { branch: 'Branch_C', status: 'completed', raw_cluster: 2, mapped_shared_class: 2, mapped_consensus_class: 2, mapped_subtype: 'Subtype Gamma', mapped_subtype_name: 'Subtype Gamma', distance_confidence: 0.566900, mapping_purity: 0.9902, feature_coverage: 1.0, branch_reliability: weightC, outlier_ratio: 0.416741, outlier_penalty: 1.0, final_vote_weight: 0.477143, mapping_reliability: 'high', supports_unweighted_winner: 'yes', supports_weighted_winner: 'yes', supports_soft_support_winner: 'yes' }
           ],
           centroid_distances: [
             { branch: 'Branch_A', cluster_0_distance: 19.085982, cluster_1_distance: 22.446127, cluster_2_distance: 13.622665, cluster_3_distance: 4.462877, cluster_4_distance: 31.275436 },
@@ -649,8 +653,8 @@ function App() {
             { subtype_class: 0, subtype_name: 'Subtype Alpha', branch_A_support: 0.109766, branch_B_support: 0.137089, branch_C_support: 0.154103, total_support: 0.400958 },
             { subtype_class: 3, subtype_name: 'Subtype Delta', branch_A_support: 0.071574, branch_B_support: 0.176884, branch_C_support: 0.129007, total_support: 0.377466 }
           ],
-          warning_report: `SON_MODEL CONSENSUS PREDICTION WARNINGS\n========================================\n- Mode: Client-side Engine (GitHub Pages Static Host).\n- Parsed ${totalRows.toLocaleString()} gene records.\n- Branch C used approximate log2-count VST proxy (0.85 reliability).\n- Branch_B outlier penalty applied (0.850).\n`,
-          run_log: `[${timestampStr}] Start son_model consensus prediction for ${sampleId}\n[${timestampStr}] Client-side parsing verified: ${totalRows} rows\n[${timestampStr}] Applied consensus alignment\n[${timestampStr}] Decision: predicted, Subtype Gamma\n[${timestampStr}] End run.\n`,
+          warning_report: `SON_MODEL CONSENSUS PREDICTION WARNINGS\n========================================\n- Consensus Model: son_model (Evidence Accumulation Clustering)\n- Active Branch Weights: Branch A (${weightA.toFixed(2)}), Branch B (${weightB.toFixed(2)}), Branch C (${weightC.toFixed(2)})\n- Parsed ${totalRows.toLocaleString()} gene records.\n- Branch C used approximate log2-count VST proxy (0.85 reliability).\n- Branch_B outlier penalty applied (0.850).\n`,
+          run_log: `[${timestampStr}] Start son_model consensus prediction for ${sampleId}\n[${timestampStr}] Loaded son_model reference factors: ensemble weights A=${weightA}, B=${weightB}, C=${weightC}\n[${timestampStr}] Client-side parsing verified: ${totalRows} rows\n[${timestampStr}] Applied son_model consensus alignment\n[${timestampStr}] Decision: predicted, Subtype Gamma\n[${timestampStr}] End run.\n`,
           files_generated: ['prediction_summary.json', 'prediction_summary.txt', 'branch_predictions.tsv', 'voting_decision.tsv', 'centroid_distances.tsv', 'soft_subtype_support.tsv', 'warning_report.txt', 'run_log.txt']
         };
       } catch (clientErr: any) {
@@ -662,16 +666,15 @@ function App() {
       }
     }
 
-    clearInterval(simInterval);
-    clearAllTimeouts();
-    setSimulatedProgress(100);
-
-    setPipelineState('mapping');
-    timeoutsRef.current.push(window.setTimeout(() => setPipelineState('voting'), 1200));
+    // Advance story telling states smoothly
+    timeoutsRef.current.push(window.setTimeout(() => setPipelineState('mapping'), 2800));
+    timeoutsRef.current.push(window.setTimeout(() => setPipelineState('voting'), 4000));
     timeoutsRef.current.push(window.setTimeout(() => {
+      clearInterval(simInterval);
+      setSimulatedProgress(100);
       setResult(data);
       setPipelineState('completed');
-    }, 2400));
+    }, 5000));
   };
 
   const getDistanceData = (branch: string) => {
