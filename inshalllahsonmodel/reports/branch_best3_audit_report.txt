@@ -1,0 +1,43 @@
+Branch Best_3 Audit Report
+==========================
+
+This report documents the findings from inspecting the Branch A, B, and C best_3 folders.
+
+Files Found:
+------------
+Branch A:
+- 01_best_model/selected_model_metrics.csv
+- 01_best_model/selected_model_summary.txt
+- 01_best_model/cluster_assignments/final_best_branch_A_cluster_assignments.tsv
+- 01_best_model/marker_genes/ (Top 100 PC-based markers)
+
+Branch B:
+- 01_best_model/selected_model_metrics.csv
+- 01_best_model/selected_model_summary.txt
+- 01_best_model/cluster_assignments/final_best_branch_B_cluster_assignments.tsv
+
+Branch C:
+- 01_best_model/selected_model_metrics.csv
+- 01_best_model/selected_model_metrics.tsv
+- 01_best_model/selected_model_summary.txt
+- 01_best_model/cluster_assignments/final_best_branch_C_cluster_assignments.tsv
+
+Selected Models:
+----------------
+Branch A: KMeans on pca_5_genes_500 (K=4)
+Branch B: KMeans on pca_5_genes_500 (K=4)
+Branch C: KMeans on pca_5_genes_2000 (K=4)
+
+Sample Counts:
+--------------
+All branches share a cohort of 328 samples.
+
+Warnings:
+---------
+- Original joblib artifacts (Scalers/PCA) were not found in the best_3 folders.
+- Independent artifacts were reconstructed using the exact training data and parameters specified in the metrics files.
+- Branch C uses log2(counts+1) for single-sample prediction as a proxy for VST.
+
+Final Build Status:
+-------------------
+The inshalllahsonmodel build is complete and verified against training samples.

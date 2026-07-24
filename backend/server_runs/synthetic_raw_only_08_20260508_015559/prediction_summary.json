@@ -1,0 +1,76 @@
+{
+  "sample_id": "synthetic_raw_only_08",
+  "final_status": "predicted_with_branch_disagreement",
+  "final_shared_class": 1,
+  "final_subtype_name": "Subtype Beta",
+  "unweighted_majority_vote": "tie",
+  "weighted_vote_winner": 1,
+  "soft_support_winner": 1,
+  "weighted_margin": 0.27384745244845754,
+  "soft_support_margin": 0.35754510730781186,
+  "branch_details": {
+    "Branch_A": {
+      "status": "completed",
+      "raw_cluster": 0,
+      "confidence": 0.030710077489428965,
+      "coverage": 1.0,
+      "distances": {
+        "0": 11.015371491772905,
+        "1": 22.740918973081417,
+        "2": 12.258873635543079,
+        "3": 11.364372244036698,
+        "4": 26.797569303033402
+      },
+      "best_distance": 11.015371491772905,
+      "median_distance": 12.258873635543079,
+      "outlier_ratio": 0.8985630995442063,
+      "outlier_penalty": 0.7,
+      "mapped_class": 0,
+      "purity": 0.8933333333333333,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.019204035123389578
+    },
+    "Branch_B": {
+      "status": "completed",
+      "raw_cluster": 1,
+      "confidence": 0.10562323497562318,
+      "coverage": 1.0,
+      "distances": {
+        "0": 46.07485272126725,
+        "1": 32.20814485501733,
+        "2": 36.01183093597596,
+        "3": 40.98640142010509
+      },
+      "best_distance": 32.20814485501733,
+      "median_distance": 38.49911617804052,
+      "outlier_ratio": 0.8365943962254363,
+      "outlier_penalty": 0.85,
+      "mapped_class": 3,
+      "purity": 0.9726027397260274,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.08732003055861451
+    },
+    "Branch_C": {
+      "status": "completed",
+      "raw_cluster": 2,
+      "confidence": 0.4291098808004817,
+      "coverage": 1.0,
+      "distances": {
+        "0": 24.443785766621257,
+        "1": 44.43432038738954,
+        "2": 13.954715769564789,
+        "3": 41.29998082049786
+      },
+      "best_distance": 13.954715769564789,
+      "median_distance": 32.871883293559556,
+      "outlier_ratio": 0.4245182925638568,
+      "outlier_penalty": 1.0,
+      "mapped_class": 1,
+      "purity": 0.9901960784313726,
+      "reliability_factor": 0.85,
+      "vote_weight": 0.3611674830070721
+    }
+  },
+  "timestamp": "20260508_015559",
+  "decision_reason": "weighted and soft support agree, overriding unweighted majority/tie"
+}

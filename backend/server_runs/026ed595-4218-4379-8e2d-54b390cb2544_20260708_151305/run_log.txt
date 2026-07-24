@@ -1,0 +1,5 @@
+[20260708_151305] Start son_model consensus prediction for 026ed595-4218-4379-8e2d-54b390cb2544
+[20260708_151305] Reused inshalllahsonmodel_v3 branch inference artifacts
+[20260708_151305] Applied son_model/mapping_reference.tsv consensus alignment
+[20260708_151305] Decision: uncertain, Uncertain
+[20260708_151305] End run.

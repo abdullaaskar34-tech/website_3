@@ -1,0 +1,30 @@
+TOOLTIP VISIBILITY FIX REPORT
+Date: 2026-05-08
+Status: SUCCESS
+
+A. Problem Identified
+Tooltips were being clipped by parent containers (like cards and tables) that used `overflow: hidden`. The original implementation used absolute positioning relative to the trigger, making it impossible for the tooltip to "break out" of its parent's boundaries.
+
+B. Technical Solution
+1. React Portals: Refactored `MetricTooltip` to use `createPortal`, rendering tooltips directly into `document.body`. This bypasses all parent CSS clipping rules.
+2. Fixed Positioning: Switched from `absolute` to `fixed` positioning, using `getBoundingClientRect()` to dynamically calculate coordinates.
+3. Collision Detection: Implemented horizontal and vertical viewport detection. Tooltips now:
+   - Stay at least 20px away from screen edges.
+   - Flip to "top" position if there isn't enough space at the bottom.
+4. Interaction Improvements:
+   - Added "Click-to-Pin": Users can click a term to lock the tooltip open, allowing them to read long scientific explanations without holding the mouse steady.
+   - Max Height & Scroll: Added a scrollable area for very long content to prevent tooltips from growing too tall for small viewports.
+   - High Z-Index: Set to `9999` to ensure they appear above all other UI elements.
+
+C. Files Changed
+- frontend/src/App.tsx: Major refactor of `MetricTooltip` component and addition of necessary imports (`createPortal`, `useEffect`, `useLayoutEffect`).
+
+D. Results
+- No more clipping on the Pipeline Flow Map nodes.
+- Table headers in the Analytical Matrix now show full explanations without being cut off by the table container.
+- Final Result node tooltips stay within the viewport.
+- Mobile-friendly: Tooltips auto-size and position based on available width.
+
+E. Build Status
+- npm run build: SUCCESS
+- React runtime: Verified stable.

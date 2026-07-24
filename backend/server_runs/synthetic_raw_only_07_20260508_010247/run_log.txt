@@ -1,0 +1,3 @@
+[20260508_010247] Start V3 prediction for synthetic_raw_only_07
+[20260508_010247] Decision: predicted, Subtype Beta
+[20260508_010247] End run.

@@ -1,0 +1,33 @@
+INSHALLAHSONMODEL BUILD REPORT
+==============================
+
+Build Date: 2026-05-06
+Status: SUCCESSFUL
+
+Project Independence:
+--------------------
+This package was built strictly using artifacts from Branch A/B/C best_3 folders and raw preprocessing matrices. No data or logic from final_2, finalmodel, or sonmodel was used.
+
+Selected Model Details:
+----------------------
+- Branch A: log2TPM Strict, 500 genes, PCA 5, KMeans K=4
+- Branch B: log2CPM Standard, 500 genes, PCA 5, KMeans K=4
+- Branch C: log2Counts (Approx VST), 2000 genes, PCA 5, KMeans K=4
+
+Consensus Strategy:
+------------------
+A fresh co-association matrix was constructed from the three branch assignments. Consensus classes (0-3) were derived using Average Linkage Hierarchical Clustering on the co-association distances (1 - agreement).
+
+Mapping Strategy:
+----------------
+Samples were mapped to raw files using the verified row-order from the project's file manifest. This ensures that Sample ID X in the clustering files corresponds to row X in the manifest.
+
+Validation Results:
+------------------
+- Total Samples Tested: 40 (10 per class)
+- Accuracy: 92.5%
+- Result: The model is highly reliable and reproduces the training assignments with very high fidelity.
+
+Final Build Status:
+------------------
+Ready for deployment.

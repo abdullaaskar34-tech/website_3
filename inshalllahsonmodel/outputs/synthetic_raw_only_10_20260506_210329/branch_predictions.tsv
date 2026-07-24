@@ -1,0 +1,4 @@
+branch	status	raw_cluster	mapped_consensus_class	confidence	coverage
+Branch_A	completed	4	2	0.07154625810751451	1.0
+Branch_B	completed	1	3	0.4056681343460497	1.0
+Branch_C	completed	3	3	0.3661072087953048	1.0

@@ -1,0 +1,18 @@
+Branch-Only Consensus Build Report
+==================================
+
+Method: Evidence Accumulation Clustering (EAC) using average linkage hierarchical clustering on a co-association matrix.
+Final shared classes: 4
+
+Class Sizes:
+branch_only_consensus_class
+1    103
+0     84
+3     77
+2     64
+
+Label Alignment purity (Branch vs Consensus):
+branch
+Branch_A    0.902624
+Branch_B    0.915095
+Branch_C    0.970833

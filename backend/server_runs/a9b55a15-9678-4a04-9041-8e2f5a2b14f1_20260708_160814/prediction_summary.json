@@ -1,0 +1,78 @@
+{
+  "sample_id": "a9b55a15-9678-4a04-9041-8e2f5a2b14f1",
+  "final_status": "predicted",
+  "final_shared_class": 0,
+  "final_subtype_name": "Subtype Alpha",
+  "final_subtype_profile": "Neural/synaptic expression profile",
+  "consensus_model": "son_model (Evidence Accumulation Clustering)",
+  "unweighted_majority_vote": 0,
+  "weighted_vote_winner": 0,
+  "soft_support_winner": 0,
+  "weighted_margin": 0.7914410384620942,
+  "soft_support_margin": 0.19597774195688655,
+  "branch_details": {
+    "Branch_A": {
+      "status": "completed",
+      "raw_cluster": 0,
+      "confidence": 0.5771535826341628,
+      "coverage": 1.0,
+      "distances": {
+        "0": 5.93481124393383,
+        "1": 24.3960760199156,
+        "2": 14.145233532300136,
+        "3": 14.035382589930565,
+        "4": 25.060218139045237
+      },
+      "best_distance": 5.93481124393383,
+      "median_distance": 14.145233532300136,
+      "outlier_ratio": 0.4195626201548626,
+      "outlier_penalty": 1.0,
+      "mapped_class": 0,
+      "purity": 0.8933,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.5155712953670977
+    },
+    "Branch_B": {
+      "status": "completed",
+      "raw_cluster": 1,
+      "confidence": 0.15435548190318704,
+      "coverage": 1.0,
+      "distances": {
+        "0": 36.41934039226448,
+        "1": 23.487830772323175,
+        "2": 27.775064190493037,
+        "3": 30.59328130531732
+      },
+      "best_distance": 23.487830772323175,
+      "median_distance": 29.18417274790518,
+      "outlier_ratio": 0.8048139988207924,
+      "outlier_penalty": 0.85,
+      "mapped_class": 1,
+      "purity": 0.9726,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.12760722044418377
+    },
+    "Branch_C": {
+      "status": "completed",
+      "raw_cluster": 0,
+      "confidence": 0.48610218190919596,
+      "coverage": 1.0,
+      "distances": {
+        "0": 12.586693789688425,
+        "1": 35.06553035913949,
+        "2": 24.492600176696023,
+        "3": 42.7685023764139
+      },
+      "best_distance": 12.586693789688425,
+      "median_distance": 29.779065267917755,
+      "outlier_ratio": 0.4226692032145795,
+      "outlier_penalty": 1.0,
+      "mapped_class": 0,
+      "purity": 0.9765,
+      "reliability_factor": 0.85,
+      "vote_weight": 0.4034769635391804
+    }
+  },
+  "timestamp": "20260708_160814",
+  "decision_reason": "full concordance between majority, weighted, and soft support"
+}

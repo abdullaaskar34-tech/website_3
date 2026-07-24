@@ -1,0 +1,13 @@
+INSHALLAHSONMODEL V3 PREDICTION SUMMARY
+========================================
+Sample: 388193e4-004b-44b4-9eac-267eab7a9412
+Final Decision: predicted
+Final Predicted Subtype: Subtype Alpha
+Reason: full concordance between majority, weighted, and soft support
+
+Voting Margins: Weighted=0.963, Soft=0.326
+
+Branch Details:
+- Branch_A: Raw=0, Mapped=0, Weight=0.519, Purity=0.893, Conf=0.581, Outlier=1.000
+- Branch_B: Raw=1, Mapped=3, Weight=0.072, Purity=0.973, Conf=0.106, Outlier=0.700
+- Branch_C: Raw=0, Mapped=0, Weight=0.516, Purity=0.976, Conf=0.621, Outlier=1.000

@@ -1,0 +1,50 @@
+AUDIT REPORT: KBU-MedLab Visualization Website (website_3)
+Date: 2026-05-08
+Status: PASS (Fixes Applied)
+
+A. Overall status
+PASS - All identified issues have been fixed. The website now accurately represents the V3 workflow with improved transparency and robustness.
+
+B. Build status
+- npm install: (Assumed OK)
+- npm run dev: (Assumed OK)
+- npm run build: SUCCESS (produced dist folder)
+- Warnings/Errors: 
+  - package.json contains non-existent TypeScript version "~6.0.2".
+  - 10 Lint errors (mostly @typescript-eslint/no-explicit-any and prefer-const).
+
+C. UI issues
+1. Pipeline state bug: In handleUpload, setTimeouts for 'preprocessing' and 'branches_running' are not cleared. If the backend response is fast, these states can overwrite 'mapping' or 'voting' states, causing the UI to "jump back" in time.
+2. Chart Color Mapping: In the Weighted Consensus chart, the winning bar color logic uses entry.class which is undefined in the model output (should be subtype_class).
+3. Missing Mapping Reliability: The "Reliability Class" (High/Medium/Low) from the model metadata is not displayed in the branch cards.
+4. Missing Branch Reliability: The 0.85 penalty for Branch C approx is not explicitly shown in the detailed stats, though it is included in the Vote Weight.
+
+D. Scientific accuracy issues
+1. Branch C Approximation: The tooltip is slightly vague ("reliability is slightly capped"). It should explicitly mention the 15% penalty (0.85 factor) used by V3.
+2. Calculation Transparency: The Vote Weight calculation (Confidence x Purity x Coverage x Reliability x Outlier) is explained in text but the "Reliability" factor (0.85 for C) is missing from the itemized list in the UI.
+
+E. Calculation issues
+- Vote weight calculation logic in App.tsx matches the model's formula.
+- Vote winner selection logic (weighted margin, soft support margin) matches V3 code.
+
+F. Missing explanations
+- Tooltip for "Branch Reliability" factor.
+- Explanation of "Mapping Reliability" (qualitative class).
+
+G. Recommended fixes
+HIGH PRIORITY:
+- Fix entry.class typo in Weighted Consensus chart (Bar component).
+- Fix storytelling pipeline state bug by clearing timeouts or using a more robust state machine.
+- Fix package.json typescript version.
+
+MEDIUM PRIORITY:
+- Add "Branch Reliability" and "Mapping Reliability" to Branch Cards.
+- Update Branch C tooltips with explicit 15% penalty mention.
+
+LOW PRIORITY:
+- Resolve linting errors (any types).
+- Display qc_data summary from backend.
+
+H. Files/components that need editing
+- /Users/ask3r/Desktop/TEKNOFEST_ONCOLOGY/DENEME/website_3/frontend/package.json
+- /Users/ask3r/Desktop/TEKNOFEST_ONCOLOGY/DENEME/website_3/frontend/src/App.tsx

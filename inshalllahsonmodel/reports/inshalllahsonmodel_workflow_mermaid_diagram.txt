@@ -1,0 +1,59 @@
+flowchart TD
+    A[Raw GDC/STAR RNA-seq TSV] --> B[Read TSV and ignore comment lines]
+    B --> C[Remove technical rows<br/>N_unmapped, N_multimapping,<br/>N_noFeature, N_ambiguous]
+    C --> D[Keep ENSG gene rows]
+    D --> E[Extract raw counts from unstranded]
+    D --> F[Extract TPM from tpm_unstranded if available]
+
+    E --> G1
+    F --> G1
+
+    subgraph G1[Parallel Branch Processing]
+        A1[Branch A<br/>Align selected genes<br/>log2(TPM + 1)<br/>Scale and PCA]
+        B1[Branch B<br/>Align selected genes<br/>CPM then log2(CPM + 1)<br/>Scale and PCA]
+        C1[Branch C<br/>Require --enable_branch_C_approx<br/>Align selected genes<br/>approximate log2(count + 1)<br/>Scale and PCA]
+    end
+
+    G1 --> H1[Branch A centroid distances]
+    G1 --> H2[Branch B centroid distances]
+    G1 --> H3[Branch C centroid distances]
+
+    H1 --> I1[Raw Branch A cluster]
+    H2 --> I2[Raw Branch B cluster]
+    H3 --> I3[Raw Branch C cluster]
+
+    I1 --> J[Branch-to-shared-class mapping]
+    I2 --> J
+    I3 --> J
+
+    J --> K[Attach mapping purity and reliability]
+    K --> L[Voting stage]
+
+    L --> M[Unweighted majority]
+    L --> N[Weighted evidence<br/>confidence * purity * penalty]
+
+    M --> O{Clear result?}
+    N --> O
+
+    O -->|Yes| P[Final shared class]
+    O -->|Low margin or no valid votes| Q[Uncertain result]
+
+    P --> R[Subtype label<br/>Alpha / Beta / Gamma / Delta]
+    Q --> S[Uncertain status warning]
+
+    R --> T[Generate outputs]
+    S --> T
+
+    T --> U[prediction_summary.txt]
+    T --> V[prediction_summary.json]
+    T --> W[branch_predictions.tsv]
+    T --> X[centroid_distances.tsv]
+    T --> Y[voting_decision.tsv]
+    T --> Z[mapping_reliability.tsv]
+    T --> AA[warning_report.txt]
+    T --> AB[run_log.txt]
+    T --> AC[class_0.xlsx to class_3.xlsx]
+
+    C1 -.-> AD[Warning: Branch C is approximate,<br/>not true DESeq2 VST]
+    K -.-> AE[Warning: low mapping purity can reduce reliability]
+    L -.-> AF[Warning: branch disagreement can lower confidence]

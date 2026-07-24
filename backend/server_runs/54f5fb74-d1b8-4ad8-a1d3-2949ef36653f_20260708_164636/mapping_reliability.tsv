@@ -1,0 +1,4 @@
+branch	raw_cluster	mapped_shared_class	mapped_subtype	mapping_purity	reliability_class	warning
+Branch_A	2	2	Subtype Gamma	0.7273	low	Purity < 0.75. Significant mapping uncertainty.
+Branch_B	1	1	Subtype Beta	0.9726	high	None
+Branch_C	2	2	Subtype Gamma	0.9902	high	None

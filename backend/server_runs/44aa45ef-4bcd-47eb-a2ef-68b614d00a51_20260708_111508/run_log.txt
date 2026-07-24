@@ -1,0 +1,5 @@
+[20260708_111508] Start son_model consensus prediction for 44aa45ef-4bcd-47eb-a2ef-68b614d00a51
+[20260708_111508] Reused inshalllahsonmodel_v3 branch inference artifacts
+[20260708_111508] Applied son_model/mapping_reference.tsv consensus alignment
+[20260708_111508] Decision: predicted, Subtype Delta
+[20260708_111508] End run.

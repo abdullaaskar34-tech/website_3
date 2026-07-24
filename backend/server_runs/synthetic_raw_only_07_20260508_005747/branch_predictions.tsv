@@ -1,0 +1,4 @@
+branch	status	raw_cluster	mapped_shared_class	mapped_subtype	distance_confidence	mapping_purity	feature_coverage	branch_reliability	outlier_ratio	outlier_penalty	final_vote_weight	mapping_reliability	supports_unweighted_winner	supports_weighted_winner	supports_soft_support_winner	warnings
+Branch_A	completed	2	1	Subtype Beta	0.37386156229127465	0.7272727272727273	1.0	1.0	0.5534459510881352	1.0	0.27189931803001793	low	yes	yes	yes	Purity < 0.75. Significant mapping uncertainty.
+Branch_B	completed	1	3	Subtype Delta	0.10321793616416858	0.9726027397260274	1.0	1.0	0.8564139952933932	0.7	0.07027303325149559	high	no	no	no	
+Branch_C	completed	2	1	Subtype Beta	0.027363954125179637	0.9901960784313726	1.0	0.85	0.7848233024660315	0.85	0.0195766288470556	high	yes	yes	yes	

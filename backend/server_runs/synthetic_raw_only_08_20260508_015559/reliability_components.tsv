@@ -1,0 +1,4 @@
+branch	distance_confidence	mapping_purity	feature_coverage	branch_reliability	outlier_penalty	final_vote_weight	explanation
+Branch_A	0.030710077489428965	0.8933333333333333	1.0	1.0	0.7	0.019204035123389578	Combined weight for Branch_A
+Branch_B	0.10562323497562318	0.9726027397260274	1.0	1.0	0.85	0.08732003055861451	Combined weight for Branch_B
+Branch_C	0.4291098808004817	0.9901960784313726	1.0	0.85	1.0	0.3611674830070721	Combined weight for Branch_C

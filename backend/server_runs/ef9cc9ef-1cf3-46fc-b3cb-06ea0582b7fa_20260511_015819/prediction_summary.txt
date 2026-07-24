@@ -1,0 +1,13 @@
+INSHALLAHSONMODEL V3 PREDICTION SUMMARY
+========================================
+Sample: ef9cc9ef-1cf3-46fc-b3cb-06ea0582b7fa
+Final Decision: uncertain
+Final Predicted Subtype: Uncertain
+Reason: disagreement between voting methods or insufficient margin
+
+Voting Margins: Weighted=0.044, Soft=0.157
+
+Branch Details:
+- Branch_A: Raw=0, Mapped=0, Weight=0.183, Purity=0.893, Conf=0.242, Outlier=0.850
+- Branch_B: Raw=1, Mapped=3, Weight=0.140, Purity=0.973, Conf=0.169, Outlier=0.850
+- Branch_C: Raw=2, Mapped=1, Weight=0.007, Purity=0.990, Conf=0.010, Outlier=0.850

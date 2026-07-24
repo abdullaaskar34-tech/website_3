@@ -1,0 +1,5 @@
+subtype_class	subtype_name	unweighted_vote_count	weighted_vote_sum	soft_support_sum	final_selected
+0	Subtype Alpha	0	0.0	0.36527716097718577	no
+1	Subtype Beta	3	0.40987092448711226	0.8420673921664092	yes
+2	Subtype Gamma	0	0.0	0.5060366114663611	no
+3	Subtype Delta	0	0.0	0.7022102575183921	no

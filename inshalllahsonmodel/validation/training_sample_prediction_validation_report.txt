@@ -1,0 +1,49 @@
+Inshalllahsonmodel Training Sample Validation Report
+===================================================
+
+Total tested: 40
+Matched: 37
+Accuracy: 92.50%
+
+Details:
+                                    uuid  expected  predicted  match
+0   c0b1e5a6-3308-43c6-9e76-feda9f67c1a0         2          3  False
+1   5b1cc683-d363-4cb8-b9b2-050c3c541858         2          2   True
+2   44aa45ef-4bcd-47eb-a2ef-68b614d00a51         2          2   True
+3   5b56daff-2531-46b1-a277-86b88b878c61         2          2   True
+4   f60c516c-6be7-4dda-9e46-46a87039c099         2          2   True
+5   03ddea6f-d377-4e2a-a59d-91d5c5b6e4ed         2          2   True
+6   9fefe100-9765-4b8a-8468-51df066f0f0c         2          2   True
+7   bdd0d102-23f1-4b2d-9080-4eb1c933ddd7         2          3  False
+8   4ac05a26-e45b-4936-99fa-e031cd5b212c         2          2   True
+9   251de1f4-0bc3-4b44-af08-1abc9c720f67         2          2   True
+10  1ceaa856-24da-428c-ae0a-c8c5ec039853         0          0   True
+11  6efd1a34-3261-4ad3-87cc-da685ba06d2b         0          0   True
+12  8ce23744-e0bc-459b-8b6d-8bac6c4ef6d5         0          0   True
+13  0257f378-cf6a-42f2-9cb1-0d10b4ca1b9a         0          0   True
+14  f4e07a40-74e5-4c35-ae98-7ca190fff6c9         0          0   True
+15  71d11e4c-6fe8-47ba-91a5-6566158614fa         0          0   True
+16  d7b7ba93-518f-4ee9-a966-d5eb7c3cc8f3         0          1  False
+17  79431769-1471-4ae8-b324-3f02d1a25507         0          0   True
+18  36fa95b5-2cf1-4033-91ee-832547ff52fd         0          0   True
+19  b5a77ad0-9041-4392-afde-ff98f1321c97         0          0   True
+20  55e09827-cf4f-4286-84cc-2b2da280266e         1          1   True
+21  bd011c84-2d5f-4d9d-97c6-4ed6ad1cf044         1          1   True
+22  3b771109-4c7d-4963-9d89-4ea431c8ad57         1          1   True
+23  54f5fb74-d1b8-4ad8-a1d3-2949ef36653f         1          1   True
+24  09cda3f9-fd03-416c-9ad7-8e27cdb7bd10         1          1   True
+25  efd59495-0b78-4b9e-af2b-20adbd7689f5         1          1   True
+26  5b48d67b-b6c5-41aa-a8f2-9a73c45ede88         1          1   True
+27  e58cdc72-ac07-40cd-90c5-ebb2d0b8321d         1          1   True
+28  e044dbf9-7587-48b7-b58a-b4f5d9401309         1          1   True
+29  32ee07e4-bec3-4d00-b603-60933581046c         1          1   True
+30  39c60ad1-540a-4ad9-a735-b83f5d1c51f1         3          3   True
+31  fa094819-3bc6-4bc6-92cc-906254bbfa73         3          3   True
+32  e7b0cb4b-d9c4-440f-b5d4-857d7e53e303         3          3   True
+33  0db34205-31a0-49e3-972d-ec4e4f7c03c5         3          3   True
+34  5990f089-fa26-4ba3-997c-61ff9c7d3dbb         3          3   True
+35  051dc36f-47e2-4d77-b9b9-c5f2d315f5f3         3          3   True
+36  0f89ce0f-1176-4c48-af82-4917ccc8f919         3          3   True
+37  e1757a20-2d6f-4aee-bafb-804302b448ea         3          3   True
+38  f426768e-744a-4bed-bb8e-b5957a350bf2         3          3   True
+39  1871e575-a4a5-45c7-9b01-3c207e9c0465         3          3   True

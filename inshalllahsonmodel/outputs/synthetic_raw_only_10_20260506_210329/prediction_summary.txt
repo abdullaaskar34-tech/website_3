@@ -1,0 +1,10 @@
+INSHALLAHSONMODEL PREDICTION SUMMARY
+====================================
+Sample: synthetic_raw_only_10
+Final Predicted Class: 3
+Votes in shared space: [2, 3, 3]
+
+Details:
+- Branch_A: completed (Raw Clus: 4, Mapped: 2)
+- Branch_B: completed (Raw Clus: 1, Mapped: 3)
+- Branch_C: completed (Raw Clus: 3, Mapped: 3)

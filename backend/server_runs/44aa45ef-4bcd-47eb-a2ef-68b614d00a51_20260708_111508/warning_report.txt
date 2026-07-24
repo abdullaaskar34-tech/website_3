@@ -1,0 +1,7 @@
+SON_MODEL CONSENSUS PREDICTION WARNINGS
+========================================
+- Branch C used approximate log2-count VST proxy (0.85 reliability).
+- Branch_B distance confidence is low (0.049).
+- Branch_B outlier penalty applied (0.850).
+
+All consensus subtypes are computational research-only hypotheses; no clinical validation.

@@ -1,0 +1,5 @@
+[20260709_164321] Start son_model consensus prediction for 7127a123-4f5b-4fab-b1fe-deeb790fedd3
+[20260709_164321] Reused inshalllahsonmodel_v3 branch inference artifacts
+[20260709_164321] Applied son_model/mapping_reference.tsv consensus alignment
+[20260709_164321] Decision: predicted, Subtype Gamma
+[20260709_164321] End run.

@@ -1,0 +1,4 @@
+branch	raw_cluster	mapped_shared_class	mapped_subtype	mapping_purity	reliability_class	warning
+Branch_A	0	0	Subtype Alpha	0.8933	moderate	Purity < 0.90
+Branch_B	1	1	Subtype Beta	0.9726	high	None
+Branch_C	0	0	Subtype Alpha	0.9765	high	None

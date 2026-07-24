@@ -1,0 +1,29 @@
+FIX PLAN: KBU-MedLab Visualization Website (website_3)
+Date: 2026-05-08
+
+1. Fix package.json
+- Change "typescript": "~6.0.2" to "~5.4.0" (or current stable).
+- Why: Prevent build confusion and potential tool breakage.
+
+2. Fix Pipeline State Bug (App.tsx)
+- Implementation: Use a ref to store timeout IDs and clear them when the request finishes or before setting a new state.
+- File: frontend/src/App.tsx
+- Expected Behavior: UI states flow forward and do not regress if the backend responds quickly.
+
+3. Fix Weighted Consensus Chart (App.tsx)
+- Change: entry.class to entry.subtype_class in the Cell fill logic.
+- File: frontend/src/App.tsx
+- Expected Behavior: The bar corresponding to the winning subtype is highlighted in purple.
+
+4. Add Missing Reliability Metrics (App.tsx)
+- Add "Branch Reliability" and "Mapping Reliability" to the detailed view and branch card header.
+- File: frontend/src/App.tsx
+- Why: Ensure full transparency of the V3 weighted voting formula.
+
+5. Update Tooltips (App.tsx)
+- Update Branch_C and Reliability tooltips to be more specific.
+- File: frontend/src/App.tsx
+
+6. Clean up Linting (App.tsx)
+- Fix prefer-const and add basic types to replace 'any' where obvious.
+- File: frontend/src/App.tsx

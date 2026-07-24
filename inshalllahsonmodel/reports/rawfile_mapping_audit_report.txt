@@ -1,0 +1,8 @@
+Raw File Mapping Audit Report
+=============================
+
+Total samples mapped: 328
+Mapping method: Verified_Row_Order
+Mapping confidence: High
+
+Verification: Numeric sample IDs (0-327) were mapped via the 0-indexed row position in the file manifest.

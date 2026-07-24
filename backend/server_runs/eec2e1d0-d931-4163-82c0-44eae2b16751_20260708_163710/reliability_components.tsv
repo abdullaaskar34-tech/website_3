@@ -1,0 +1,4 @@
+branch	distance_confidence	mapping_purity	feature_coverage	branch_reliability	outlier_penalty	final_vote_weight	explanation
+Branch_A	0.3344800685594924	0.9545	1.0	1.0	0.85	0.27137204162403017	Combined son_model consensus weight for Branch_A
+Branch_B	0.1668517872410655	0.9726	1.0	1.0	0.85	0.13793804103006127	Combined son_model consensus weight for Branch_B
+Branch_C	0.06871485935513773	1.0	1.0	0.85	0.85	0.049646485884087	Combined son_model consensus weight for Branch_C

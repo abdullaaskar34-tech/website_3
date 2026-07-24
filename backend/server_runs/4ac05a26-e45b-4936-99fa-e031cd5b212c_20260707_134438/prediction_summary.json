@@ -1,0 +1,76 @@
+{
+  "sample_id": "4ac05a26-e45b-4936-99fa-e031cd5b212c",
+  "final_status": "predicted",
+  "final_shared_class": 2,
+  "final_subtype_name": "Subtype Gamma",
+  "unweighted_majority_vote": 2,
+  "weighted_vote_winner": 2,
+  "soft_support_winner": 2,
+  "weighted_margin": 1.0718582167762556,
+  "soft_support_margin": 0.5402376883870393,
+  "branch_details": {
+    "Branch_A": {
+      "status": "completed",
+      "raw_cluster": 4,
+      "confidence": 0.6387496235276862,
+      "coverage": 1.0,
+      "distances": {
+        "0": 24.85053422668843,
+        "1": 22.1516643900612,
+        "2": 35.8011760092392,
+        "3": 34.031995006803236,
+        "4": 8.002297099759208
+      },
+      "best_distance": 8.002297099759208,
+      "median_distance": 24.85053422668843,
+      "outlier_ratio": 0.3220171054046419,
+      "outlier_penalty": 1.0,
+      "mapped_class": 2,
+      "purity": 0.9545454545454546,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.6097155497309732
+    },
+    "Branch_B": {
+      "status": "completed",
+      "raw_cluster": 1,
+      "confidence": 0.11225568832753781,
+      "coverage": 1.0,
+      "distances": {
+        "0": 41.77416245748057,
+        "1": 23.782517582744184,
+        "2": 37.630524029886914,
+        "3": 26.789828186058962
+      },
+      "best_distance": 23.782517582744184,
+      "median_distance": 32.21017610797294,
+      "outlier_ratio": 0.7383541618115829,
+      "outlier_penalty": 0.85,
+      "mapped_class": 3,
+      "purity": 0.9726027397260274,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.09280316151461517
+    },
+    "Branch_C": {
+      "status": "completed",
+      "raw_cluster": 1,
+      "confidence": 0.6528774453645854,
+      "coverage": 1.0,
+      "distances": {
+        "0": 39.573320276147406,
+        "1": 12.639685990574757,
+        "2": 51.480691405241075,
+        "3": 36.41274766631971
+      },
+      "best_distance": 12.639685990574757,
+      "median_distance": 37.99303397123356,
+      "outlier_ratio": 0.3326843020700115,
+      "outlier_penalty": 1.0,
+      "mapped_class": 2,
+      "purity": 1.0,
+      "reliability_factor": 0.85,
+      "vote_weight": 0.5549458285598975
+    }
+  },
+  "timestamp": "20260707_134438",
+  "decision_reason": "full concordance between majority, weighted, and soft support"
+}

@@ -1,0 +1,5 @@
+[20260708_160814] Start son_model consensus prediction for a9b55a15-9678-4a04-9041-8e2f5a2b14f1
+[20260708_160814] Reused inshalllahsonmodel_v3 branch inference artifacts
+[20260708_160814] Applied son_model/mapping_reference.tsv consensus alignment
+[20260708_160814] Decision: predicted, Subtype Alpha
+[20260708_160814] End run.

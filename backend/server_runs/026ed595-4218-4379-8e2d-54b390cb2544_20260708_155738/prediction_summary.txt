@@ -1,0 +1,13 @@
+SON_MODEL CONSENSUS PREDICTION SUMMARY
+========================================
+Sample: 026ed595-4218-4379-8e2d-54b390cb2544
+Final Decision: uncertain
+Final Predicted Subtype: Uncertain
+Reason: disagreement between voting methods or insufficient margin
+
+Voting Margins: Weighted=0.231, Soft=0.085
+
+Branch Details:
+- Branch_A: Raw=0, Mapped=0, Weight=0.350, Purity=0.893, Conf=0.392, Outlier=1.000
+- Branch_B: Raw=1, Mapped=1, Weight=0.154, Purity=0.973, Conf=0.187, Outlier=0.850
+- Branch_C: Raw=0, Mapped=0, Weight=0.036, Purity=0.977, Conf=0.051, Outlier=0.850

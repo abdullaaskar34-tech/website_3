@@ -1,0 +1,78 @@
+{
+  "sample_id": "d620997f-b99e-4e20-a20d-d5b67ba3ce4b",
+  "final_status": "predicted",
+  "final_shared_class": 3,
+  "final_subtype_name": "Subtype Delta",
+  "final_subtype_profile": "Membrane/anti-apoptotic expression profile",
+  "consensus_model": "son_model (Evidence Accumulation Clustering)",
+  "unweighted_majority_vote": 3,
+  "weighted_vote_winner": 3,
+  "soft_support_winner": 3,
+  "weighted_margin": 0.8643450977515317,
+  "soft_support_margin": 0.3898973449478168,
+  "branch_details": {
+    "Branch_A": {
+      "status": "completed",
+      "raw_cluster": 4,
+      "confidence": 0.5376010627821433,
+      "coverage": 1.0,
+      "distances": {
+        "0": 27.47934122931274,
+        "1": 25.713606577837623,
+        "2": 38.927718289359774,
+        "3": 37.212976213862405,
+        "4": 11.889944353092607
+      },
+      "best_distance": 11.889944353092607,
+      "median_distance": 27.47934122931274,
+      "outlier_ratio": 0.43268665916840426,
+      "outlier_penalty": 1.0,
+      "mapped_class": 3,
+      "purity": 0.9545,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.5131402144255558
+    },
+    "Branch_B": {
+      "status": "completed",
+      "raw_cluster": 1,
+      "confidence": 0.03841175601768503,
+      "coverage": 1.0,
+      "distances": {
+        "0": 40.72912239635975,
+        "1": 25.44511491426553,
+        "2": 37.84542252141972,
+        "3": 26.461549497449884
+      },
+      "best_distance": 25.44511491426553,
+      "median_distance": 32.1534860094348,
+      "outlier_ratio": 0.7913641123083142,
+      "outlier_penalty": 0.85,
+      "mapped_class": 1,
+      "purity": 0.9726,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.03175538281738039
+    },
+    "Branch_C": {
+      "status": "completed",
+      "raw_cluster": 1,
+      "confidence": 0.45054148958041923,
+      "coverage": 1.0,
+      "distances": {
+        "0": 36.76026641756237,
+        "1": 20.198241227970218,
+        "2": 54.33048856318507,
+        "3": 45.751709838972964
+      },
+      "best_distance": 20.198241227970218,
+      "median_distance": 41.25598812826767,
+      "outlier_ratio": 0.4895832615784873,
+      "outlier_penalty": 1.0,
+      "mapped_class": 3,
+      "purity": 1.0,
+      "reliability_factor": 0.85,
+      "vote_weight": 0.3829602661433563
+    }
+  },
+  "timestamp": "20260722_095649",
+  "decision_reason": "full concordance between majority, weighted, and soft support"
+}

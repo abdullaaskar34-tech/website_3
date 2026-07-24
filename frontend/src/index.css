@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-scientific-dark: #0f172a;
+  --color-scientific-card: #1e293b;
+  --color-scientific-accent: #0ea5e9;
+  --color-scientific-success: #10b981;
+  --color-scientific-warning: #f59e0b;
+  --color-scientific-danger: #ef4444;
+  --color-scientific-muted: #64748b;
+}
+
+body {
+  background-color: var(--color-scientific-dark);
+  color: #f1f5f9; /* slate-100 */
+}
+
+.glass-panel {
+  background-color: rgba(30, 41, 59, 0.8); /* scientific-card with opacity */
+  backdrop-filter: blur(12px);
+  border: 1px solid #334155; /* slate-700 */
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  border-radius: 0.75rem;
+}
+
+/* PCA projection plot: give the legend its own row and keep it clear of axis titles.
+   min-height stops label compression on resize; margin-bottom reserves legend space. */
+.pca-plot-wrap {
+  min-height: 500px;
+  margin-bottom: 16px;
+}
+.pca-plot-wrap .recharts-default-legend {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 20px;
+  padding: 0 !important;
+}
+.pca-plot-wrap .recharts-legend-item {
+  margin-right: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+}
+
+/* Printable patient sheet: hidden on screen, isolated to a clean single page on print */
+.print-sheet { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  .print-sheet, .print-sheet * { visibility: visible; }
+  .print-sheet {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 24px;
+    background: #ffffff;
+    color: #000000;
+  }
+  @page { margin: 12mm; }
+}

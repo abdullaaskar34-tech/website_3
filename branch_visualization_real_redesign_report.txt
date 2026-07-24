@@ -1,0 +1,43 @@
+BRANCH VISUALIZATION REAL REDESIGN REPORT
+Date: 2026-05-08
+Status: SUCCESS
+
+A. Summary of Previous Redesign Flaws
+The previous redesign, while adding new content, still maintained the "Three Large Vertical Cards" layout as the primary visualization. This led to visual repetition and made side-by-side comparison of analytical metrics difficult for the user.
+
+B. New Analytical Dashboard Structure
+The UI has been completely overhauled to move away from the card-centric layout to a true analytical dashboard:
+
+1. SECTION 1 — Branch Comparison Matrix (Primary):
+   - Replaced the cards with a wide, side-by-side comparison matrix.
+   - Branches A, B, and C are now columns.
+   - Rows provide a direct comparison of Method, Input, Genes, Coverage, Raw Cluster, Consensus Class, Subtype, Confidence, Purity, Reliability, Outlier Penalty, and Vote Weight.
+   - Features sticky headers and meaningful highlighting for consensus branches.
+
+2. SECTION 2 — Consensus Prediction Pipeline:
+   - A single, horizontal flow map showing the universal progression of a sample.
+   - Traces the path from RNA-seq TSV -> Branch Split -> PCA -> Distance -> Cluster Mapping -> Vote Assembly -> Final Subtype.
+   - Each node is interactive and linked to the scientific tooltip system.
+
+3. SECTION 3 — Voting Evidence & Weighted Support:
+   - Split-view panel showing individual "Evidence Assembly" (branch votes) and "Weighted Subtype Support" (total support bars).
+   - Visualizes how the model sums evidence across branches to reach a final decision.
+   - Includes horizontal progress-style bars to show subtype support magnitude.
+
+4. SECTION 4 — Detailed Branch Diagnostics (Accordion):
+   - The old per-branch cards (including centroid distance charts) have been moved into an optional, expandable accordion.
+   - This keeps the main view clean and analytical while preserving deep-dive capabilities.
+
+C. Scientific Tooltips
+Tooltips have been further expanded to provide Definition, Interpretation, and Effect on Prediction for all key terms (TPM, CPM, Purity, Outlier Penalty, etc.).
+
+D. Technical Changes
+- Significant refactor of frontend/src/App.tsx.
+- Upgraded TypeScript logic to handle modern syntax.
+- Optimized responsive grid layouts for 1440p+ and mobile screens.
+- Build Status: SUCCESS.
+
+E. Improvements
+- Immediate visibility of cross-branch differences.
+- Professional, non-repetitive dashboard aesthetic.
+- Clearer explanation of the "Consensus" mechanism through the Evidence Assembly view.

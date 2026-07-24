@@ -1,0 +1,462 @@
+INSHALLAHSONMODEL WEBSITE VISUALIZATION PLAN
+============================================
+
+Purpose
+-------
+This plan translates the audited predictor workflow into a website or dashboard structure that can explain the pipeline to bioinformatics reviewers, software engineers, competition juries, and non-specialist technical users.
+
+Recommended visualization target
+--------------------------------
+Use `inshalllahsonmodel_v2` as the primary website logic reference because it exposes:
+
+- branch-specific preprocessing
+- branch-to-consensus mapping
+- mapping purity and reliability
+- weighted voting
+- uncertainty handling
+- detailed output files
+
+The simpler base `inshalllahsonmodel` can be mentioned as the predecessor implementation.
+
+
+Design principles
+-----------------
+1. Show raw-to-result provenance
+   - Every displayed decision should be traceable to an input file, branch, mapping table, and output report
+
+2. Separate raw branch clusters from final shared classes
+   - This is one of the most important concepts in the system
+
+3. Keep "what the code actually does" distinct from "optional explanatory visuals"
+   - Example: centroid distances are saved by the model
+   - Example: PCA scatter coordinates are not saved and would need extra computation
+
+4. Surface limitations early
+   - Especially Branch C approximate mode
+   - Especially disagreement and uncertainty
+
+5. Make the three branches feel parallel but comparable
+   - Same card layout
+   - Same output fields
+   - Same warning badge positions
+
+
+Page 1. Upload Raw Data
+-----------------------
+Goal:
+Introduce the input contract and show how the sample enters the system.
+
+Core UI elements:
+
+- Drag-and-drop upload box
+- Example file name
+- Expected format panel
+- "How sample ID is extracted" note
+
+What to display:
+
+- Expected file type: GDC/STAR augmented gene-count TSV
+- Expected fields:
+  - `gene_id`
+  - `gene_name`
+  - `gene_type`
+  - `unstranded`
+  - `tpm_unstranded`
+  - optional additional numeric columns also present in the file
+- Example technical rows:
+  - `N_unmapped`
+  - `N_multimapping`
+  - `N_noFeature`
+  - `N_ambiguous`
+- Sample ID extraction rule:
+  - basename before first period
+
+Suggested interactive behavior:
+
+- After upload, show:
+  - file name
+  - extracted sample ID
+  - file size
+  - upload timestamp
+
+Warning text:
+
+- "This system expects a GDC/STAR-style augmented gene-count TSV. Other layouts may fail or trigger branch skips."
+
+
+Page 2. Raw File QC
+-------------------
+Goal:
+Show what the predictor actually reads before branching.
+
+Core UI elements:
+
+- QC checklist panel
+- Technical-row handling panel
+- Column-detection table
+- Gene-row summary strip
+
+What should come directly from audited behavior:
+
+- file readable as TSV
+- technical rows filtered
+- ENSG rows retained
+- `unstranded` detected or fallback used
+- `tpm_unstranded` detected or missing
+
+What may be implemented as supplementary QC:
+
+- gene row count
+- total raw count
+- TPM sum
+- first few rows preview
+
+Recommended fields:
+
+- comment/header line detected: yes/no
+- columns found
+- raw count source used
+- TPM source used
+- Branch A ready: yes/no
+- Branch B ready: yes/no
+- Branch C ready only if approximation mode enabled
+
+Warning text:
+
+- "TPM sum and total count summaries are useful QC additions, but they are not explicitly produced by the current predictor code."
+
+
+Page 3. Three-Branch Processing
+-------------------------------
+Goal:
+Visually explain that the same sample is processed in three parallel mathematical views.
+
+Layout:
+
+- Three parallel cards in one row on desktop
+- Stacked cards on mobile
+
+Card A: Branch A - log2TPM
+- Input column: `tpm_unstranded`
+- Gene selection: 500 genes
+- Transform: `log2(TPM + 1)`
+- Scaler: pretrained Branch A scaler
+- PCA: pretrained Branch A PCA5
+- Output:
+  - feature coverage
+  - raw Branch A cluster
+  - distance confidence
+
+Card B: Branch B - log2CPM
+- Input column: `unstranded`
+- Gene selection: 500 genes
+- Transform:
+  - CPM from raw counts
+  - `log2(CPM + 1)`
+- Scaler: pretrained Branch B scaler
+- PCA: pretrained Branch B PCA5
+- Output:
+  - feature coverage
+  - raw Branch B cluster
+  - distance confidence
+
+Card C: Branch C - approximate VST proxy
+- Input column: `unstranded`
+- Gene selection: 2000 genes
+- Transform:
+  - `log2(raw_counts + 1)`
+- Scaler: pretrained Branch C scaler
+- PCA: pretrained Branch C PCA5
+- Output:
+  - feature coverage
+  - raw Branch C cluster
+  - distance confidence
+
+Mandatory warning badge on Branch C:
+
+- "Approximate single-sample proxy. Not true DESeq2 VST."
+
+Recommended micro-visuals inside each card:
+
+- gene-match progress bar
+- scaler icon
+- PCA icon
+- centroid target icon
+- confidence badge
+
+
+Page 4. PCA / Centroid Distance View
+------------------------------------
+Goal:
+Show how each branch turns the new sample into a nearest-centroid problem.
+
+Important implementation note:
+
+- The predictor saves centroid distances
+- It does not save PCA coordinates directly
+
+Recommended primary visualization:
+
+- One distance chart per branch
+- X-axis: raw branch cluster ID
+- Y-axis: centroid distance
+- Highlight nearest centroid
+
+Optional enhanced visualization:
+
+- A conceptual PCA scatter illustration
+- Label clearly if coordinates are schematic rather than exported
+
+Data source:
+
+- `centroid_distances.tsv`
+
+Tooltip fields:
+
+- branch name
+- raw cluster ID
+- centroid distance
+- nearest/not-nearest badge
+
+Warning text:
+
+- "Displayed PCA projection coordinates require extra export or recomputation. The current predictor directly exports centroid distances, not PCA coordinates."
+
+
+Page 5. Branch Mapping
+----------------------
+Goal:
+Explain how branch-specific raw clusters become comparable.
+
+Core UI elements:
+
+- Mapping table
+- Purity badge
+- Reliability badge
+- Consensus-space explainer
+
+Recommended visual:
+
+- Three branch lanes flowing into four shared classes
+- Example labels:
+  - Branch A raw cluster 4 -> shared class 2
+  - Branch C raw cluster 2 -> shared class 1
+
+Data sources:
+
+- `branch_to_consensus_alignment.tsv`
+- `v2_branch_mapping_reliability.tsv`
+
+Fields to display for each branch result:
+
+- raw branch cluster
+- mapped shared class
+- mapped subtype name
+- purity
+- reliability class
+- mapping warning
+
+Recommended badge logic:
+
+- High reliability: green
+- Moderate reliability: amber
+- Low reliability: red
+
+Educational note:
+
+- "A raw branch cluster number is not the final subtype. It must first be aligned to the shared class space using the reference cohort."
+
+
+Page 6. Voting Panel
+--------------------
+Goal:
+Explain how the final class is chosen after mapping.
+
+Two possible modes to document:
+
+1. Base package mode
+   - majority vote on mapped classes
+
+2. V2 audited mode
+   - majority vote plus weighted evidence and uncertainty logic
+
+Recommended website default:
+
+- Show the V2 mode
+- Add a small note: "Base package used majority vote only; V2 adds weighted transparency."
+
+Main visual components:
+
+- Branch vote chips:
+  - Branch A -> class X
+  - Branch B -> class Y
+  - Branch C -> class Z
+- Unweighted vote count bar chart
+- Weighted vote sum bar chart
+- Agreement percentage badge
+- Final subtype tile
+
+Fields to display:
+
+- Branch vote
+- Branch distance confidence
+- Mapping purity
+- Final branch vote weight
+- Unweighted winner
+- Weighted winner
+- Weighted margin
+- Decision status
+- Final subtype name
+
+Decision explanation box:
+
+- "Clear unweighted majority"
+- "Weighted resolution of unweighted tie"
+- "Weighted override of unweighted majority"
+- "Uncertain due to insufficient weighted margin"
+
+Warning conditions:
+
+- Branch disagreement
+- low-confidence branch
+- low-purity mapping
+- Branch C approximation
+
+
+Page 7. Output Files
+--------------------
+Goal:
+Show users what the run generates and what each file is for.
+
+Recommended layout:
+
+- Output folder card
+- Download table
+- File-purpose table
+- Example report preview panel
+
+Actual V2 files to list:
+
+- `prediction_summary.txt`
+- `prediction_summary.json`
+- `branch_predictions.tsv`
+- `centroid_distances.tsv`
+- `voting_decision.tsv`
+- `mapping_reliability.tsv`
+- `warning_report.txt`
+- `run_log.txt`
+- `selected_model_metrics_used.tsv`
+- `rawfile_export_audit.tsv`
+- `class_0.xlsx`
+- `class_1.xlsx`
+- `class_2.xlsx`
+- `class_3.xlsx`
+
+Important clarification for the UI:
+
+- The class Excel files contain:
+  - summary
+  - class-specific reference sample index
+  - prediction context
+- They do not contain full raw expression matrices in the audited V2 implementation
+
+Useful download grouping:
+
+- Human-readable summaries
+- Machine-readable tables
+- Class reference files
+
+
+Page 8. Warnings and Limitations
+--------------------------------
+Goal:
+Make scientific and operational limits explicit.
+
+Must-display warnings:
+
+- exploratory computational subtype only
+- not clinical proof
+- Branch C approximate mode
+- branch disagreement may occur
+- low mapping purity may weaken interpretation
+- low distance confidence may weaken interpretation
+- raw cluster numbers are branch-specific and not directly comparable
+
+Recommended layout:
+
+- One warning card per limitation
+- Severity icons
+- "Why this matters" expandable text
+
+Suggested cards:
+
+1. Clinical limitation
+2. Branch C approximation limitation
+3. Consensus mapping limitation
+4. Confidence limitation
+5. Metadata inconsistency note for Branch A
+
+
+Cross-page data model
+---------------------
+The frontend data model should distinguish:
+
+- Uploaded sample metadata
+- Branch preprocessing results
+- Branch centroid distances
+- Raw-to-shared mapping results
+- Vote-level results
+- Warning-level results
+- Output-file inventory
+
+Recommended normalized objects:
+
+- `sample`
+- `qc_summary`
+- `branch_results`
+- `centroid_distances`
+- `mapping_results`
+- `voting_results`
+- `warnings`
+- `output_files`
+
+
+Suggested interaction details
+-----------------------------
+1. Hover tooltips for formulas
+   - `log2(TPM + 1)`
+   - `log2(CPM + 1)`
+   - `log2(count + 1)` proxy
+   - weight = confidence * purity * penalty
+
+2. Toggle between:
+   - raw branch cluster view
+   - mapped shared class view
+
+3. Expand/collapse branch details
+
+4. Download buttons beside each saved file
+
+5. "Trace this result" mode
+   - highlight which file or table supports each displayed number
+
+
+Recommended narrative sequence for a demo
+-----------------------------------------
+1. User uploads raw RNA-seq file
+2. Website shows column detection and technical-row filtering
+3. Three branch cards animate in parallel
+4. Each branch reports its nearest raw cluster and confidence
+5. Mapping panel translates raw clusters into shared classes
+6. Voting panel aggregates branch evidence
+7. Final subtype appears with agreement and warning badges
+8. Output panel shows downloadable reports and class Excel files
+
+
+Needs verification items for the website team
+---------------------------------------------
+1. If the production deployment uses base `inshalllahsonmodel` instead of V2, the voting page must be simplified to majority vote only.
+
+2. If the website must display actual PCA coordinates, an additional export or recomputation layer is needed because the predictor currently saves centroid distances, not plotted PCA coordinates.
+
+3. If the website must show TPM sum and raw count QC exactly as numbers, that logic must be implemented separately because it is not emitted by the current predictor outputs.

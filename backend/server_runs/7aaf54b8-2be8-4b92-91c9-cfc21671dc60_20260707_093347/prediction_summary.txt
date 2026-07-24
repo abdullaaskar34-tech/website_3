@@ -1,0 +1,13 @@
+INSHALLAHSONMODEL V3 PREDICTION SUMMARY
+========================================
+Sample: 7aaf54b8-2be8-4b92-91c9-cfc21671dc60
+Final Decision: low_margin_uncertain
+Final Predicted Subtype: Uncertain
+Reason: winning subtype has insufficient margin
+
+Voting Margins: Weighted=0.028, Soft=0.008
+
+Branch Details:
+- Branch_A: Raw=4, Mapped=2, Weight=0.041, Purity=0.955, Conf=0.043, Outlier=1.000
+- Branch_B: Raw=1, Mapped=3, Weight=0.218, Purity=0.973, Conf=0.264, Outlier=0.850
+- Branch_C: Raw=1, Mapped=2, Weight=0.204, Purity=1.000, Conf=0.283, Outlier=0.850

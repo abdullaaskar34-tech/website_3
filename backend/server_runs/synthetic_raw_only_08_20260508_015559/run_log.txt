@@ -1,0 +1,3 @@
+[20260508_015559] Start V3 prediction for synthetic_raw_only_08
+[20260508_015559] Decision: predicted_with_branch_disagreement, Subtype Beta
+[20260508_015559] End run.

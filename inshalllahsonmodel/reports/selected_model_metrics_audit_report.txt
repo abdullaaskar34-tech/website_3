@@ -1,0 +1,26 @@
+Selected Model Metrics Audit Report
+===================================
+
+This report documents the performance metrics of the selected best models per branch.
+
+Branch: Branch_A
+- Dataset: pca_5_genes_500
+- Method: KMeans
+- N Clusters: 4
+- Silhouette: 0.2660020358824906
+- Combined Score: 0.6043858742663291
+
+Branch: Branch_B
+- Dataset: pca_5_genes_500
+- Method: KMeans
+- N Clusters: 4
+- Silhouette: 0.297138154347123
+- Combined Score: 0.6162870905173358
+
+Branch: Branch_C
+- Dataset: pca_5_genes_2000
+- Method: KMeans
+- N Clusters: 4
+- Silhouette: 0.262358421315598
+- Combined Score: 1.4245558826604765
+

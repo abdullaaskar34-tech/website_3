@@ -1,0 +1,6 @@
+V3 PREDICTION WARNINGS
+======================
+- Branch C used approximate log2-count proxy.
+- Branch_B outlier penalty applied (0.850).
+- Branch_C distance confidence is low (0.051).
+- Branch_C outlier penalty applied (0.850).

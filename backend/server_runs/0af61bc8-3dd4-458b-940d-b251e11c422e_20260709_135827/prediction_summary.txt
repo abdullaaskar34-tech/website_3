@@ -1,0 +1,13 @@
+SON_MODEL CONSENSUS PREDICTION SUMMARY
+========================================
+Sample: 0af61bc8-3dd4-458b-940d-b251e11c422e
+Final Decision: low_margin_uncertain
+Final Predicted Subtype: Uncertain
+Reason: winning subtype has insufficient margin (guard 0.05)
+
+Voting Margins: Weighted=0.331, Soft=0.006
+
+Branch Details:
+- Branch_A: Raw=0, Mapped=0, Weight=0.195, Purity=0.893, Conf=0.256, Outlier=0.850
+- Branch_B: Raw=1, Mapped=1, Weight=0.205, Purity=0.973, Conf=0.248, Outlier=0.850
+- Branch_C: Raw=0, Mapped=0, Weight=0.341, Purity=0.977, Conf=0.411, Outlier=1.000

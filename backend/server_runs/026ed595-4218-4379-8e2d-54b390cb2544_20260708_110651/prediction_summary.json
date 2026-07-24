@@ -1,0 +1,78 @@
+{
+  "sample_id": "026ed595-4218-4379-8e2d-54b390cb2544",
+  "final_status": "uncertain",
+  "final_shared_class": "uncertain",
+  "final_subtype_name": "Uncertain",
+  "final_subtype_profile": null,
+  "consensus_model": "son_model (Evidence Accumulation Clustering)",
+  "unweighted_majority_vote": 0,
+  "weighted_vote_winner": 0,
+  "soft_support_winner": 2,
+  "weighted_margin": 0.23120125010278864,
+  "soft_support_margin": 0.08477388442756273,
+  "branch_details": {
+    "Branch_A": {
+      "status": "completed",
+      "raw_cluster": 0,
+      "confidence": 0.3915603485182786,
+      "coverage": 1.0,
+      "distances": {
+        "0": 10.131545799292109,
+        "1": 22.280441168611272,
+        "2": 18.66036052697948,
+        "3": 16.651685627342843,
+        "4": 22.669073057974288
+      },
+      "best_distance": 10.131545799292109,
+      "median_distance": 18.66036052697948,
+      "outlier_ratio": 0.5429448045283367,
+      "outlier_penalty": 1.0,
+      "mapped_class": 0,
+      "purity": 0.8933,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.34978085933137826
+    },
+    "Branch_B": {
+      "status": "completed",
+      "raw_cluster": 1,
+      "confidence": 0.18662421886621802,
+      "coverage": 1.0,
+      "distances": {
+        "0": 39.74812912528479,
+        "1": 24.613338113933164,
+        "2": 30.260721655383847,
+        "3": 32.8013547120639
+      },
+      "best_distance": 24.613338113933164,
+      "median_distance": 31.531038183723872,
+      "outlier_ratio": 0.7806066508097983,
+      "outlier_penalty": 0.85,
+      "mapped_class": 1,
+      "purity": 0.9726,
+      "reliability_factor": 1.0,
+      "vote_weight": 0.15428410797889108
+    },
+    "Branch_C": {
+      "status": "completed",
+      "raw_cluster": 0,
+      "confidence": 0.05060726200706421,
+      "coverage": 1.0,
+      "distances": {
+        "0": 22.427372276493944,
+        "1": 37.706204012784916,
+        "2": 23.622860570807767,
+        "3": 40.849546135632565
+      },
+      "best_distance": 22.427372276493944,
+      "median_distance": 30.66453229179634,
+      "outlier_ratio": 0.7313782601459258,
+      "outlier_penalty": 0.85,
+      "mapped_class": 0,
+      "purity": 0.9765,
+      "reliability_factor": 0.85,
+      "vote_weight": 0.03570449875030145
+    }
+  },
+  "timestamp": "20260708_110651",
+  "decision_reason": "disagreement between voting methods or insufficient margin"
+}

@@ -1,0 +1,4 @@
+branch	raw_cluster	mapped_shared_class	mapped_subtype	mapping_purity	reliability_class	warning
+Branch_A	1	1	Subtype Beta	0.9737	high	None
+Branch_B	1	1	Subtype Beta	0.9726	high	None
+Branch_C	3	1	Subtype Beta	0.9167	high	None

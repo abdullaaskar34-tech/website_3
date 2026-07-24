@@ -1,0 +1,43 @@
+BRANCH VISUALIZATION REDESIGN REPORT
+Date: 2026-05-08
+Status: SUCCESS
+
+A. Summary of Changes
+The branch prediction visualization has been completely redesigned to transition from repetitive large cards to a professional, three-part analytical dashboard. The new design focuses on the "mathematical journey" of a sample through each branch.
+
+B. New UI Structure
+1. Branch Summary Overview (Top):
+   - Compact horizontal row of cards for Branch A, B, and C.
+   - Shows normalization method, mapped subtype, vote weight, and consensus status at a glance.
+   - Integrated "Reliability Mapping" badges (High/Medium/Low).
+
+2. Analytical Transformation Pipeline (Middle):
+   - Horizontal stepper visualization for each branch.
+   - Steps: Raw Data -> Normalize -> PCA -> Dist Profile -> Raw Cluster -> Map Class -> Subtype.
+   - Each step is hoverable and linked to scientific tooltips.
+
+3. Cross-Branch Metric Comparison (Bottom):
+   - Comprehensive table for side-by-side comparison of all branch metrics.
+   - Columns: Branch, Method, Genes, Coverage, Raw Cluster, Class, Subtype, Confidence, Purity, Branch Reliability, Outlier Penalty, Vote Weight.
+   - Interactive sticky headers and hover effects.
+
+C. Scientific Tooltips Added
+Detailed tooltips (with Definition, Interpretation, and Effect on Prediction) added for:
+- Branch, TPM/log2TPM, CPM/log2CPM, VST Proxy/log2Count, Genes, Coverage, PCA, Centroid Distance, Raw Cluster, Mapped Shared Class, Subtype, Confidence, Purity, Branch Reliability, Outlier Penalty, Vote Weight, Agreement, Weighted Vote, Soft Support.
+
+D. Files Edited
+- frontend/src/App.tsx: Major refactor of branch rendering logic and tooltip content.
+- frontend/package.json: Upgraded TypeScript to ^5.7.0 for modern syntax support.
+- frontend/tsconfig.app.json / tsconfig.node.json: Fixed build configuration errors.
+
+E. Improvements
+- Reduced visual clutter and repetition.
+- Increased scientific transparency by exposing the V3 weighted formula components.
+- Improved educational value through a massive expansion of the tooltip system.
+- Professional dark-theme aesthetic with meaningful accent colors (blue for Branch A, green for Branch B).
+
+F. Build/Test Status
+- npm install: SUCCESS
+- npm run build: SUCCESS
+- React runtime: Verified stable.
+- Model logic: 100% preserved (no changes to formulas or predictions).

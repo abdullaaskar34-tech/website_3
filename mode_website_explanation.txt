@@ -1,0 +1,381 @@
+================================================================================
+KBU-MedLab :: PRECISION ONCOLOGY PIPELINE  —  WEBSITE & MODEL EXPLANATION
+================================================================================
+Project   : TEKNOFEST_ONCOLOGY / DENEME / website_3
+Written    : 2026-07-10
+Scope      : What this website is, how it is built and run, and the REAL
+             step-by-step process that turns one uploaded RNA-seq file into a
+             predicted tumour subtype.
+
+--------------------------------------------------------------------------------
+0.  ONE-PARAGRAPH SUMMARY
+--------------------------------------------------------------------------------
+This is a research web application for Glioblastoma Multiforme (GBM)
+transcriptomic subtyping. A user uploads a single STAR-aligned RNA-seq
+gene-count file. The site sends it to a local API, which runs a "consensus"
+machine-learning predictor. The predictor normalises the sample three
+different ways (three "branches"), places it into a trained clustering space,
+maps each branch's result into one shared 4-class subtype space
+(Alpha / Beta / Gamma / Delta), and then combines the three opinions with a
+reliability-weighted vote. The final subtype, the full evidence trail, and
+downloadable report files are shown back in an interactive dashboard.
+
+IMPORTANT: The four subtypes are COMPUTATIONAL RESEARCH PLACEHOLDERS produced by
+unsupervised clustering. They are NOT clinically validated diagnoses and must
+not be used for real patient decisions.
+
+
+================================================================================
+PART A — THE SOFTWARE (how the website is built and runs)
+================================================================================
+
+A.1  COMPONENTS
+--------------------------------------------------------------------------------
+The system has three moving parts, all running on the same Mac:
+
+  1) FRONTEND  (the website the user sees)
+     - Tech: React + TypeScript, built with Vite, styled with Tailwind CSS,
+       animations by framer-motion, charts by Recharts, icons by lucide-react.
+     - Location: DENEME/website_3/frontend
+     - Dev server: Vite on port 5173
+     - Entry code: frontend/src/App.tsx  (the whole UI lives here)
+
+  2) BACKEND  (the API that runs the model)
+     - Tech: FastAPI served by Uvicorn (Python).
+     - Location: DENEME/website_3/backend/main.py
+     - Server: Uvicorn on port 8001
+     - Endpoints:
+         GET  /api/health                  -> liveness + which model is active
+         POST /api/predict                 -> upload a sample, run prediction
+         GET  /api/download/{run_id}       -> download all result files (zip)
+         GET  /api/download/{run_id}/{file}-> download one result file
+
+  3) THE MODEL / PREDICTOR  (the science)
+     - Script: DENEME/son_model/consensus_predictor.py
+     - The backend does NOT run the model in-process. It launches the predictor
+       as a SEPARATE Python subprocess and reads the files it writes.
+
+A.2  HOW A REQUEST FLOWS THROUGH THE STACK
+--------------------------------------------------------------------------------
+  Browser (frontend :5173)
+     │  user picks a .tsv file, clicks "Initiate Pipeline"
+     │  HTTP POST multipart/form-data
+     ▼
+  FastAPI backend (:8001)  /api/predict   (main.py)
+     │  saves the file into backend/uploads/
+     │  runs, as a subprocess:
+     │     <framework python3> son_model/consensus_predictor.py \
+     │         --predict_one --new_sample <file> \
+     │         --enable_branch_C_approx --save_outputs
+     ▼
+  consensus_predictor.py  (in DENEME/son_model)
+     │  runs the 3-branch consensus model (PART B below)
+     │  writes a timestamped folder son_model/prediction_outputs/<id>_<time>/
+     │  full of .tsv / .json / .xlsx / .txt result files
+     ▼
+  FastAPI backend
+     │  copies that output folder into backend/server_runs/<run_id>/
+     │  reads the JSON/TSV files and returns them as one JSON response
+     ▼
+  Browser
+        renders the dashboard (final subtype, branch matrix, voting, charts,
+        PCA projection, download buttons)
+
+A.3  THE "FRAMEWORK PYTHON" DETAIL (why a special interpreter is used)
+--------------------------------------------------------------------------------
+The backend deliberately runs the predictor with the system framework Python at
+    /Library/Frameworks/Python.framework/Versions/3.14/bin/python3
+NOT with the backend's own virtual environment (.venv), and NOT with the plain
+"python3" on PATH.
+
+Reason: the project lives under ~/Desktop, which macOS syncs to iCloud
+("Desktop & Documents in iCloud"). With "Optimize Mac Storage" on, iCloud can
+EVICT files to the cloud (they become "dataless" placeholders). The backend's
+.venv had thousands of evicted files; when Python tried to import them (pandas,
+scikit-learn, joblib) the read blocked forever and the server/predictor hung.
+The framework Python lives under /Library (outside iCloud), so its packages are
+always local and never evicted — it imports instantly and reliably.
+
+main.py resolves the interpreter in this order (see _resolve_predictor_python):
+    1. $PREDICTOR_PYTHON env var (manual override)
+    2. /Library/Frameworks/Python.framework/Versions/3.14/bin/python3
+    3. whatever `python3` is on PATH
+    4. the current interpreter
+
+A.4  HOW TO START / STOP EVERYTHING
+--------------------------------------------------------------------------------
+Start the backend (bound to the LAN so other devices can reach it):
+    cd DENEME/website_3/backend
+    /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 \
+        -m uvicorn main:app --host 192.168.78.201 --port 8001
+
+Start the frontend:
+    cd DENEME/website_3/frontend
+    npm run dev -- --host 192.168.78.201 --port 5173
+
+Open the website (NOTE THE PORT — plain http://192.168.78.201/ hits port 80 and
+will "refuse to connect"; you must include :5173):
+    http://192.168.78.201:5173/
+
+Same machine also works via:
+    http://localhost:5173/
+
+The frontend auto-derives the API address from the page URL: if you open
+http://<host>:5173 it calls http://<host>:8001/api. Override with a
+VITE_API_URL env var if the backend lives elsewhere.
+
+Health check:
+    curl http://192.168.78.201:8001/api/health
+
+Stop the servers: find and kill the uvicorn and node/vite processes, e.g.
+    lsof -nP -iTCP:8001 -sTCP:LISTEN -t | xargs kill
+    lsof -nP -iTCP:5173 -sTCP:LISTEN -t | xargs kill
+
+A.5  KNOWN ENVIRONMENT GOTCHA (if predictions hang or the site "won't open")
+--------------------------------------------------------------------------------
+If a prediction hangs or the backend won't import, the usual cause is iCLOUD
+evicting project files again. Symptoms and fix:
+  - Symptom: import or read blocks forever; `ls -lO <file>` shows the flag
+    "dataless"; the predictor process is stuck reading a model artifact.
+  - Immediate check: which files are evicted?
+        find DENEME -flags +dataless | head
+  - Fix now: force download them (needs a WORKING iCloud sync):
+        brctl download DENEME/clusetiong/FINAL_CLUSTERING/inshalllahsonmodel_v3/artifacts
+    If iCloud sync is stuck, a reboot is the most reliable unstick.
+  - Permanent fix: turn OFF System Settings > Apple ID > iCloud > iCloud Drive >
+    "Optimize Mac Storage", OR move the whole project out of ~/Desktop to a
+    non-synced folder (e.g. ~/dev). Then nothing gets evicted.
+
+
+================================================================================
+PART B — THE WEBSITE EXPERIENCE (what the user sees, screen by screen)
+================================================================================
+
+B.1  UPLOAD SCREEN (idle)
+--------------------------------------------------------------------------------
+- Hero title: "Reliability-Weighted RNA-seq Subtype Inference".
+- A drag-and-drop / click box that accepts .tsv, .txt, .csv.
+- Expected input: a STAR-aligned RNA-seq file with unstranded counts (the same
+  GDC "augmented_star_gene_counts.tsv" shape — ~60,000 gene rows).
+- After a file is chosen it shows filename, size, and the derived Sample ID
+  (everything before the first "." in the filename).
+- "Initiate Pipeline" sends the file to POST /api/predict.
+
+B.2  LIVE PIPELINE ANIMATION (while the backend works)
+--------------------------------------------------------------------------------
+A 5-step progress rail animates: Ingest -> QC & Filter -> Parallel Branches ->
+Consensus Map -> Vote Assembly. NOTE: this animation is a STORYTELLING
+visual on the frontend; the real computation is the single POST call. The
+narration text mirrors the real stages (parsing TSV, stripping ENSG versions,
+applying TPM/CPM/VST-proxy, projecting to 5D + mapping clusters, weighted vote).
+
+B.3  RESULT DASHBOARD (completed)
+--------------------------------------------------------------------------------
+Shown after the API returns. Sections:
+  1. Primary Inference Result — the big final subtype name (Alpha/Beta/Gamma/
+     Delta) + shared class index (0–3), the status badge (predicted /
+     predicted_with_branch_disagreement / low_margin_uncertain / uncertain),
+     the weighted margin, and a plain-language decision reason.
+  2. Data Quality Profile — total rows, whether TPM data was detected, and the
+     library size (total raw counts, in millions). Buttons: download all
+     artifacts (zip) and "Print Patient Sheet".
+  3. Consensus Prediction Pipeline — a horizontal diagram of the process. Every
+     node has a hover/click tooltip explaining the concept (definition,
+     scientific interpretation, effect on the prediction).
+  4. Analytical Branch Matrix — a table comparing Branch A / B / C side by side:
+     normalization method, input column, number of genes, feature coverage, raw
+     cluster, mapped consensus class, mapped subtype, distance confidence,
+     mapping purity, branch reliability, outlier penalty, final vote weight,
+     and status. The branch(es) matching the final class are tagged "Consensus".
+  5. Evidence Assembly + Soft Support — per-branch vote-weight bars and the
+     inverse-distance "soft support" distribution across all four subtypes.
+  6. PCA Projection Scatter — the 328 reference cohort samples plotted in a 2D
+     PCA space, coloured by subtype, with the uploaded sample drawn as a
+     pulsing star at its projected position.
+
+All numbers on the dashboard come straight from the files the predictor wrote;
+the frontend only formats them.
+
+
+================================================================================
+PART C — THE REAL MODEL PROCESS (what actually happens to your file)
+================================================================================
+This is the scientifically real part. It runs inside
+son_model/consensus_predictor.py, which REUSES the trained branch-inference
+artifacts from the legacy model "inshalllahsonmodel_v3" and re-maps them into
+the newer "son_model" consensus space.
+
+C.1  INPUT PARSING & QUALITY CONTROL (per uploaded sample)
+--------------------------------------------------------------------------------
+- The file is read as a STAR gene-count table. Technical header rows
+  (N_unmapped, N_multimapping, N_noFeature, N_ambiguous) are removed.
+- Gene IDs (ENSG…) have their version suffix stripped (ENSG000001.5 -> ENSG000001)
+  so they match the model's gene lists.
+- QC captured and shown on the site: total rows (~60,664), whether a
+  tpm_unstranded column exists, total raw library size, and a TPM sum sanity
+  check (should sum to ~1,000,000).
+
+C.2  THREE PARALLEL "BRANCHES" (three independent normalizations)
+--------------------------------------------------------------------------------
+The same sample is processed three ways so that no single normalization choice
+dominates. Each branch has its own trained scaler, PCA rotation and cluster
+centroids (from the training cohort of 328 tumours):
+
+  BRANCH A — log2TPM
+    - Uses the tpm_unstranded values, transform log2(TPM + 1).
+    - Feature set: top-500 most-variable genes.  Reliability weight: 1.00
+    - Training produced 5 raw clusters (0–4).
+
+  BRANCH B — log2CPM
+    - Uses raw unstranded counts, transform log2(CPM + 1) (CPM = counts per
+      million, normalises for sequencing depth only).
+    - Feature set: top-500 most-variable genes.  Reliability weight: 1.00
+    - Training produced 4 raw clusters (0–3).
+
+  BRANCH C — VST-proxy log2(counts + 1)
+    - A single-sample approximation of DESeq2 VST (true VST needs a whole
+      cohort, which one sample can't provide).
+    - Feature set: top-2000 most-variable genes.  Reliability weight: 0.85
+      (a deliberate 15% penalty because it is only an approximation).
+    - Training produced 4 raw clusters (0–3).
+
+C.3  PROJECTION + RAW CLUSTER ASSIGNMENT (per branch)
+--------------------------------------------------------------------------------
+For each branch:
+  1. Keep the branch's required genes; compute feature coverage = fraction of
+     required genes present in the upload. (Very low coverage skips the branch;
+     moderate coverage lowers its influence. Full cohort coverage was 100%.)
+  2. Standardise with the branch's trained scaler.
+  3. Project into that branch's 5-dimensional PCA space (PCA-5).
+  4. Compute Euclidean distance to each trained cluster centroid.
+  5. Nearest centroid = the branch's RAW cluster (e.g. "C2").
+  6. Distance confidence = derived from the margin between the nearest and
+     second-nearest centroid (bigger gap = more confident).
+  7. Outlier penalty = if the sample sits far outside the normal centroid
+     distances, its vote is reduced (guards against forcing a bad fit).
+
+Raw clusters are branch-specific and CANNOT be compared across branches
+directly — Branch A's "cluster 2" is not Branch B's "cluster 2". That is what
+the next step fixes.
+
+C.4  MAPPING RAW CLUSTERS -> ONE SHARED CONSENSUS SPACE
+--------------------------------------------------------------------------------
+Each branch's raw cluster is translated into a shared 4-class consensus label
+using son_model/mapping_reference.tsv. This alignment (and its purities) came
+from the consensus-clustering training run (PART D). The mapping is:
+
+  Branch A:  C0->Alpha(0)  C1->Beta(1)  C2->Gamma(2)  C3->Gamma(2)  C4->Delta(3)
+  Branch B:  C0->Alpha(0)  C1->Beta(1)  C2->Gamma(2)  C3->Delta(3)
+  Branch C:  C0->Alpha(0)  C1->Delta(3) C2->Gamma(2)  C3->Beta(1)
+
+Each mapping carries a "map purity" (how cleanly that raw cluster corresponds to
+its consensus class in training). Example purities range ~0.73 to 1.00; higher
+purity = more trustworthy mapping. (Note Branch A has 5 clusters but only 4
+consensus classes, so two of its clusters both map to Gamma.)
+
+C.5  THE VOTE WEIGHT (how strong each branch's opinion is)
+--------------------------------------------------------------------------------
+For every completed branch:
+
+    vote_weight = distance_confidence
+                × mapping_purity
+                × feature_coverage
+                × branch_reliability      (A/B = 1.00, C = 0.85)
+                × outlier_penalty         (1.00 normally, lower for outliers)
+
+A branch that is confident, maps cleanly, covers all genes, is a rigorous
+normalization, and is not an outlier gets a near-1.0 weight; anything weak pulls
+it down.
+
+C.6  THE DECISION ENGINE (three views must agree)
+--------------------------------------------------------------------------------
+Three independent tallies are computed in the shared consensus space:
+  - UNWEIGHTED majority: 1 branch = 1 vote.
+  - WEIGHTED vote: sum of vote_weights per subtype (strong branches count more).
+  - SOFT support: inverse-distance support (1 / distance) spread across ALL four
+    subtypes, then weighted by purity/coverage/reliability/outlier. This is a
+    continuous "safety net" instead of a hard pick.
+
+Final status rules:
+  - "predicted"                        -> all three tallies pick the SAME subtype.
+  - "predicted_with_branch_disagreement" -> weighted and soft agree, overriding a
+                                          different/tied unweighted majority.
+  - "uncertain"                        -> the tallies disagree.
+  - MARGIN GUARD: even if a winner is chosen, if the winning margin (top-1 minus
+    top-2) is below 0.05 for the weighted or soft tally, it is downgraded to
+    "low_margin_uncertain". This prevents over-confident calls on borderline
+    samples.
+
+The winning consensus class 0/1/2/3 is named Alpha/Beta/Gamma/Delta.
+
+C.7  OUTPUT FILES WRITTEN (one folder per prediction)
+--------------------------------------------------------------------------------
+Saved to son_model/prediction_outputs/<sample_id>_<timestamp>/ and mirrored to
+backend/server_runs/<run_id>/ :
+  - prediction_summary.json / .txt  : final decision, margins, per-branch detail
+  - branch_predictions.tsv          : full per-branch row (raw cluster, mapped
+                                      class, confidence, purity, coverage,
+                                      reliability, outlier, vote weight, warnings)
+  - centroid_distances.tsv          : distance to every cluster centroid
+  - soft_subtype_support.tsv        : inverse-distance support per subtype
+  - voting_decision.tsv             : the three tallies side by side
+  - mapping_reliability.tsv         : per-branch mapping quality (high/mod/low)
+  - reliability_components.tsv      : the factors that formed each vote weight
+  - warning_report.txt              : low-confidence / low-purity / outlier flags
+  - class_0..3 .xlsx                 : per-subtype workbooks (BELONG / NOT BELONG,
+                                      cohort members, prediction info)
+  - run_log.txt                     : step-by-step run trace
+
+
+================================================================================
+PART D — HOW THE MODEL WAS TRAINED (the consensus, for background)
+================================================================================
+The predictor above uses the OUTPUT of this training. It does not retrain.
+
+Cohort            : 328 GBM tumour RNA-seq samples.
+Consensus classes : k = 4  (Alpha / Beta / Gamma / Delta).
+Method            : Evidence Accumulation Clustering (EAC), Fred & Jain (2005).
+
+Why EAC: Branch A produced 5 clusters while B and C produced 4. You cannot
+directly vote a "5-cluster label" against a "4-cluster label". EAC sidesteps
+this by only ever asking, for each PAIR of samples, "were they grouped
+together?" — so different cluster counts combine naturally.
+
+Steps:
+  1. Build a weighted CO-ASSOCIATION matrix C (328x328): C[i,j] = weighted
+     fraction of branches that put samples i and j together (Branch C weighted
+     0.85). Convert to a distance D = 1 - C.
+  2. Solve two ways and pick the better:
+       - Agglomerative Average-Linkage (UPGMA) on D  (cophenetic corr. 0.9520)
+       - Spectral clustering on C as a graph affinity
+     The partition with the higher silhouette on D wins. Here Spectral won
+     (silhouette 0.7802 vs 0.7502).
+  3. Canonicalize the arbitrary consensus indices by Hungarian (Kuhn-Munkres)
+     matching to Branch B's labels, then bind to fixed names Alpha/Beta/Gamma/
+     Delta. Final consensus sizes: Alpha 84, Beta 77, Gamma 103, Delta 64.
+  4. Align each branch to the consensus and record purity, NMI, ARI:
+       Branch A: purity 0.9085  NMI 0.7402  ARI 0.6810
+       Branch B: purity 0.9116  NMI 0.7917  ARI 0.7735
+       Branch C: purity 0.9695  NMI 0.9147  ARI 0.9271
+  5. Voting confidence over the cohort: mean margin 0.7166; only 2 of 328
+     samples fell below the 0.05 low-confidence guard.
+
+Subtype placeholders and their (descriptive, provisional) expression profiles:
+  0  Alpha  — Neural/synaptic expression profile          (84 samples, 25.6%)
+  1  Beta   — Histone/chromatin remodeling profile        (77 samples, 23.5%)
+  2  Gamma  — Ion transport expression profile            (103 samples, 31.4%)
+  3  Delta  — Membrane/anti-apoptotic expression profile  (64 samples, 19.5%)
+
+
+================================================================================
+PART E — SCIENTIFIC DISCLAIMER
+================================================================================
+Every subtype, boundary, and confidence number here is a COMPUTATIONAL
+TRANSCRIPTOMIC HYPOTHESIS FOR RESEARCH ONLY. It comes purely from unsupervised
+clustering of RNA-seq features and has NO clinical pathology validation. It MUST
+NOT be used for diagnosis, prognosis, or treatment. Orthogonal laboratory and
+clinical validation are mandatory before any medical use.
+
+================================================================================
+END OF DOCUMENT
+================================================================================

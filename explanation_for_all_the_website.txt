@@ -1,0 +1,594 @@
+# KBU-MedLab Precision Oncology Pipeline — Complete System Explanation
+
+> **Document purpose:** A full technical and scientific walkthrough of the `website_3`
+> application: what it does, how it is built, how data flows through it, every metric it
+> reports, and what each file is responsible for. Written so that a reader with no prior
+> exposure to the codebase can understand the entire system end-to-end.
+>
+> **Project:** TEKNOFEST Oncology 2026 — academic research demonstration
+> **Application:** Reliability-Weighted RNA-seq Subtype Inference for Glioblastoma Multiforme (GBM)
+> **Directory analyzed:** `TEKNOFEST_ONCOLOGY/DENEME/website_3`
+
+---
+
+## 0. IMPORTANT ARCHITECTURAL NOTE (read this first)
+
+The `website_3` folder contains a **local copy** of the model at
+`website_3/inshalllahsonmodel/`. This local copy is an **older, simpler predictor**
+(it only performs plain majority voting).
+
+**The website does NOT run that local copy.** The FastAPI backend (`backend/main.py`)
+is hard-wired to execute the **`inshalllahsonmodel_v3`** predictor located OUTSIDE this
+folder at:
+
+```
+/Users/ask3r/Desktop/TEKNOFEST_ONCOLOGY/DENEME/clusetiong/FINAL_CLUSTERING/inshalllahsonmodel_v3/inshalllahsonmodel_predictor.py
+```
+
+The `v3` predictor is the richer engine that produces mapping-purity, outlier penalties,
+reliability-weighted voting, soft support, and subtype naming. **Every metric shown on the
+website comes from `v3`**, so this document describes the `v3` runtime as the authoritative
+logic. The local `website_3/inshalllahsonmodel/` copy is effectively reference/legacy
+material and is described as such in the file breakdown.
+
+---
+
+## 1. PROJECT OVERVIEW
+
+### 1.1 What the website does
+
+The website is an **interactive precision-oncology platform** that takes a single
+**RNA-seq gene-expression file** from one tumor sample and predicts which **molecular
+subtype** of **Glioblastoma Multiforme (GBM)** that sample most resembles.
+
+It is fundamentally a **transcriptomic subtype classifier built on unsupervised
+clustering**. During model building, a cohort of 328 tumor samples was clustered into
+4 consensus classes. At prediction time, a new sample is projected into the same
+mathematical space and assigned to the nearest class. The four classes are given
+human-readable placeholder names:
+
+| Shared class | Subtype name   |
+|:------------:|:---------------|
+| 0            | Subtype Alpha  |
+| 1            | Subtype Beta   |
+| 2            | Subtype Gamma  |
+| 3            | Subtype Delta  |
+
+> These subtype names are **computational placeholders** representing distinct
+> transcriptomic profiles. They are **not clinical diagnoses**.
+
+The defining scientific idea of the platform is the **tri-branch reliability-weighted
+consensus**: the same raw sample is processed through **three independent normalization
+pipelines** (Branch A, B, C). Because each normalization can bias clustering differently,
+the three branches "vote," and their votes are weighted by how trustworthy each branch's
+evidence is. This reduces normalization-specific artifacts and yields a more robust call.
+
+### 1.2 Main purpose
+
+- Provide a **research-grade, explainable** subtype prediction for a single GBM RNA-seq sample.
+- **Visualize the analytical pipeline** step-by-step (ingest → QC → three branches → PCA →
+  consensus mapping → weighted voting) so a reviewer can see exactly how the decision was made.
+- Expose **every intermediate quantity** (distances, coverage, purity, confidence, penalties,
+  vote weights) with in-line scientific tooltips.
+- Produce **downloadable analytical artifacts** (TSV tables, JSON, Excel workbooks) for
+  offline auditing.
+
+### 1.3 Tech stack
+
+**Frontend** (`frontend/`) — Single-Page Application:
+- **Vite 8** (build tool / dev server)
+- **React 19** + **TypeScript**
+- **Tailwind CSS 4** (styling; glass-morphic dark UI)
+- **Framer Motion 12** (pipeline animations / state-machine storytelling)
+- **Axios** (HTTP client to the backend)
+- **lucide-react** (icons); **Recharts** (charting library, listed as a dependency)
+- Renders entirely client-side; talks to the backend at `http://localhost:8001/api`.
+
+**Backend** (`backend/`) — REST API:
+- **FastAPI** (Python web framework)
+- **Uvicorn** (ASGI server)
+- **python-multipart** (file upload handling)
+- **pandas / numpy** (parsing the uploaded file and result tables)
+- Runs the model as an **external subprocess** (`python3 <predictor> ...`).
+
+**Model / ML layer** (`inshalllahsonmodel_v3`, executed by the backend):
+- **scikit-learn** — `StandardScaler`, `PCA`, KMeans-derived centroids
+- **joblib** — loads the pre-trained scaler/PCA artifacts per branch
+- **openpyxl** — writes the per-class Excel workbooks
+- **pandas / numpy** — all numerical processing
+
+**Model paradigm:** Unsupervised **KMeans clustering** (k=4) on **5-dimensional PCA**
+projections of the top 500 / 2000 most-variable genes per branch, with a **consensus
+label space** built by **Evidence Accumulation Clustering** (co-association matrix +
+average-linkage hierarchical clustering) over the three branches. Prediction is
+**nearest-centroid assignment**, not a trained supervised classifier.
+
+---
+
+## 2. SYSTEM ARCHITECTURE & WORKFLOW
+
+### 2.1 High-level component diagram
+
+```
+┌─────────────────────────┐         HTTP (multipart POST /api/predict)        ┌────────────────────────────┐
+│  Browser (React SPA)     │ ───────────────────────────────────────────────► │  FastAPI backend            │
+│  Vite dev server :5173   │ ◄─────────────────────────────────────────────── │  Uvicorn :8001              │
+│  App.tsx                 │              JSON prediction result               │  backend/main.py            │
+└─────────────────────────┘                                                    └──────────────┬─────────────┘
+                                                                                               │ subprocess.run(python3 ...)
+                                                                                               ▼
+                                                                        ┌────────────────────────────────────────┐
+                                                                        │  inshalllahsonmodel_v3 predictor (CLI)   │
+                                                                        │  loads artifacts → 3 branches → PCA →    │
+                                                                        │  nearest centroid → consensus map →      │
+                                                                        │  weighted vote → writes output bundle    │
+                                                                        └────────────────────────────────────────┘
+```
+
+### 2.2 Step-by-step user interaction
+
+1. **Landing / Hero.** The user opens `http://localhost:5173`. The React app shows a hero
+   panel describing the pipeline and a **drag-and-drop / click upload zone** that accepts
+   `.tsv`, `.txt`, `.csv` files.
+
+2. **File selection.** When a file is chosen, the UI shows a preview card: **filename**,
+   **size (MB)**, and the **Sample ID** (derived from the filename text before the first
+   period). Nothing is sent yet.
+
+3. **Initiate Pipeline.** The user clicks **"Initiate Pipeline."** The frontend:
+   - Builds a `FormData` object containing the file.
+   - Starts an **animated state machine** (`upload_received → preprocessing →
+     branches_running → mapping → voting → completed`). These animations are **cosmetic
+     storytelling** driven by timers; they visualize the conceptual stages while the
+     backend does the real work.
+   - Sends `POST http://localhost:8001/api/predict` with the file.
+
+4. **Backend receives the file** (`main.py:predict`):
+   - Validates the extension (`.tsv`, `.txt`, `.csv`), else HTTP 400.
+   - Saves the upload to `backend/uploads/`.
+   - Runs the **v3 predictor** as a subprocess with the flags:
+     `--predict_one --new_sample <file> --enable_branch_C_approx --save_outputs`.
+   - If the predictor exits non-zero → HTTP 500 with the captured `stderr`/`stdout`.
+
+5. **The predictor runs** (`inshalllahsonmodel_v3/...predictor.py`). See §2.3 for the
+   internal ML workflow. It writes a timestamped output folder:
+   `outputs/<sample_id>_<timestamp>/` containing all TSV/JSON/TXT/XLSX artifacts.
+
+6. **Backend collects results** (`main.py`):
+   - Locates the newest matching output folder for that sample.
+   - **Copies** it into `backend/server_runs/<run_id>/` so the frontend can download files.
+   - Parses the key artifacts (`prediction_summary.json`, `branch_predictions.tsv`,
+     `centroid_distances.tsv`, `voting_decision.tsv`, `soft_subtype_support.tsv`,
+     `mapping_reliability.tsv`, `warning_report.txt`, `run_log.txt`).
+   - **Independently computes a supplementary QC block** by re-reading the uploaded file
+     with pandas: `total_rows`, `columns`, whether `unstranded`/`tpm_unstranded` exist,
+     `total_raw_count` (library size), `tpm_sum`, and a 5-row preview. (This QC layer lives
+     in the backend, **not** in the predictor.)
+   - Replaces `NaN` floats with `null` for safe JSON, then returns one consolidated JSON
+     object (`status`, `run_id`, `sample_id`, `qc_data`, `prediction_summary`,
+     `branch_predictions`, `centroid_distances`, `voting_decision`,
+     `soft_subtype_support`, `mapping_reliability`, `warning_report`, `run_log`,
+     `files_generated`).
+
+7. **Frontend renders the results dashboard** (`App.tsx`, `completed` state):
+   - **Primary Inference Result** card: the final subtype name, the numeric class, the
+     status badge (`predicted` / `uncertain` / disagreement), the **weighted margin**, and
+     the plain-language **decision reason**.
+   - **Data Quality Profile** card: total rows, TPM detected?, library size, plus a
+     "Download All Artifacts" button (fetches a ZIP of the whole run).
+   - **Consensus Prediction Pipeline** diagram: an interactive flow with hover tooltips.
+   - **Analytical Branch Matrix**: a table comparing Branch A/B/C across ~13 rows
+     (normalization method, coverage, raw cluster, mapped class, subtype, confidence,
+     purity, reliability, outlier penalty, final vote weight, status…).
+   - **Evidence Assembly** + **Weighted Subtype Support**: bar visualizations of each
+     branch's vote weight and the total weighted support per subtype.
+   - **Detailed Branch Diagnostics** (accordion): per-branch centroid-distance bar charts,
+     outlier ratios, penalties, purity, final weight.
+   - **Generated Analytical Artifacts**: one download link per output file.
+   - **Scientific disclaimers** throughout (research-only, not diagnostic).
+
+8. **Error path.** If the backend returns an error, the UI shows an "Pipeline Execution
+   Failed" panel with the raw error text and a "Reset Pipeline" button.
+
+### 2.3 Internal ML workflow (inside the v3 predictor)
+
+For the uploaded sample the predictor performs:
+
+1. **Load sample** (`load_sample`): read TSV (`comment='#'`), drop the four STAR technical
+   rows (`N_unmapped`, `N_multimapping`, `N_noFeature`, `N_ambiguous`), keep only rows whose
+   ID starts with `ENSG`, index by `gene_id`, extract the `unstranded` (raw counts) and
+   `tpm_unstranded` (TPM) columns.
+
+2. **Load pre-trained artifacts** per branch: selected gene list, `StandardScaler`, `PCA`
+   model, and centroid table (all from `artifacts/`). Load the cross-branch alignment table,
+   the mapping-reliability table, and the class→subtype name map (all from `reference_tables/`).
+
+3. **Run the three branches in parallel** (`predict_branch`):
+   - **Branch A — log2TPM**, 500 genes: source = `tpm_unstranded`; transform =
+     `log2(TPM + 1)`. Skipped if no TPM column.
+   - **Branch B — log2CPM**, 500 genes: source = `unstranded`; `CPM = counts / library_size
+     × 1e6`; transform = `log2(CPM + 1)`.
+   - **Branch C — VST proxy**, 2000 genes: source = `unstranded`; transform =
+     `log2(counts + 1)` (an approximate single-sample proxy — **not** true DESeq2 VST). Runs
+     only because the backend passes `--enable_branch_C_approx`.
+   - **Feature alignment** (`safe_gene_match`): match required genes exactly; if <95% match,
+     retry with ENSG **version-stripped** IDs; missing genes are filled with 0. The fraction
+     matched = **feature coverage**.
+   - **Skip rule**: if coverage < 0.60, the branch is skipped.
+   - **Scale → PCA**: apply the saved scaler, then project into the branch's **5-D PCA** space.
+   - **Nearest centroid**: compute Euclidean distance to every branch centroid; the closest
+     is the **raw cluster**.
+   - Compute **distance confidence**, **outlier ratio**, and **outlier penalty** (see §4).
+
+4. **Map raw clusters → shared classes.** Each branch's raw cluster label is meaningless
+   across branches, so it is translated to a **shared class (0–3)** via
+   `branch_to_consensus_alignment.tsv`, which also carries a **purity** for that mapping.
+
+5. **Weighted voting.** Each completed branch casts one vote for its mapped shared class,
+   with a **vote weight = confidence × purity × coverage × reliability × outlier_penalty**.
+   The predictor accumulates: unweighted counts, weighted sums, and an inverse-distance
+   **soft support** profile across all four subtypes.
+
+6. **Decision policy.** Three "views" are computed — unweighted majority, weighted winner,
+   soft-support winner — and reconciled:
+   - **Full concordance** (all three agree, no tie) → `predicted`.
+   - **Weighted + soft agree** (override majority/tie) → `predicted_with_branch_disagreement`.
+   - Otherwise → `uncertain`.
+   - **Margin guard:** if `weighted_margin < 0.05` OR `soft_margin < 0.05`, the result is
+     downgraded to `low_margin_uncertain`.
+
+7. **Write outputs** (when `--save_outputs`): `prediction_summary.json/.txt`,
+   `branch_predictions.tsv`, `centroid_distances.tsv`, `voting_decision.tsv`,
+   `soft_subtype_support.tsv`, `reliability_components.tsv`, `warning_report.txt`,
+   `run_log.txt`, and `class_0..3.xlsx`.
+
+### 2.4 Data-flow summary (frontend ⇄ backend)
+
+- **Frontend → Backend:** one binary file (the RNA-seq TSV) via `multipart/form-data`.
+- **Backend → Model:** the saved file path passed as a CLI argument to a subprocess.
+- **Model → Backend:** a folder of artifacts written to disk.
+- **Backend → Frontend:** one JSON object aggregating the parsed artifacts + supplementary
+  QC + a `run_id` used to build download URLs.
+- **Downloads:** `GET /api/download/{run_id}` returns a ZIP of the whole run;
+  `GET /api/download/{run_id}/{filename}` returns one file.
+
+---
+
+## 3. INPUT AND OUTPUT SPECIFICATIONS
+
+### 3.1 Inputs (what the user must provide)
+
+- **One file per prediction.** Extension must be `.tsv`, `.txt`, or `.csv` (tab-separated
+  content is expected).
+- **Biological content:** a **STAR-aligned GDC "augmented star gene counts" RNA-seq file**
+  for a single sample. This is the standard output format from The Cancer Genome Atlas /
+  Genomic Data Commons pipeline.
+- **Expected structure:**
+  - An optional leading comment line (e.g. `# gene-model: GENCODE v36`) — ignored.
+  - Tab-separated columns. Real files contain: `gene_id`, `gene_name`, `gene_type`,
+    `unstranded`, `stranded_first`, `stranded_second`, `tpm_unstranded`, `fpkm_unstranded`,
+    `fpkm_uq_unstranded`.
+  - Four leading **technical rows** (`N_unmapped`, `N_multimapping`, `N_noFeature`,
+    `N_ambiguous`) — automatically removed.
+  - Gene rows keyed by **ENSG Ensembl identifiers** (with or without version suffixes).
+- **Required columns for a full run:**
+  - `unstranded` (raw counts) — **required** for Branch B and Branch C.
+  - `tpm_unstranded` — **needed for Branch A**; if absent, Branch A is safely skipped and the
+    prediction proceeds on the remaining branches.
+- **Coverage requirement:** at least **60%** of a branch's required genes (500 for A/B,
+  2000 for C) must be present, or that branch is skipped.
+- **Sample ID:** derived automatically from the filename (text before the first period),
+  e.g. `8a3c7c61-…-a17a4.rna_seq.augmented_star_gene_counts.tsv` → `8a3c7c61-…-a17a4`.
+
+> **No manual parameters** are required from the user — no thresholds, no gene lists, no
+> configuration. The single file is the only input.
+
+### 3.2 Outputs (what the website returns)
+
+**On-screen (interactive dashboard):**
+- **Final subtype** (Alpha/Beta/Gamma/Delta) and **numeric shared class** (0–3).
+- **Decision status:** `predicted`, `predicted_with_branch_disagreement`,
+  `uncertain`, or `low_margin_uncertain`.
+- **Weighted margin** and a natural-language **decision reason**.
+- **Data-quality profile:** total gene rows, TPM detected flag, library size (millions).
+- **Per-branch matrix:** normalization method, input column, gene count, feature coverage,
+  raw cluster, mapped shared class, mapped subtype, distance confidence, mapping purity,
+  branch reliability, outlier penalty, final vote weight, branch status.
+- **Voting visualizations:** each branch's vote-weight bar; total weighted support per
+  subtype; inverse-distance soft-support context.
+- **Per-branch diagnostics:** centroid-distance bar charts, outlier ratio/penalty, purity,
+  final weight.
+
+**Downloadable artifacts (per run):**
+- `prediction_summary.json` — machine-readable full decision (status, final class, subtype,
+  the three winners, weighted/soft margins, full per-branch details).
+- `prediction_summary.txt` — human-readable summary.
+- `branch_predictions.tsv` — one row per branch with all reliability components.
+- `centroid_distances.tsv` — distance from the sample to every centroid, per branch.
+- `voting_decision.tsv` — per candidate class: unweighted count, weighted sum, soft support,
+  final-selected flag.
+- `soft_subtype_support.tsv` — inverse-distance support per subtype, split by branch.
+- `reliability_components.tsv` — the factors that compose each branch's vote weight.
+- `warning_report.txt`, `run_log.txt` — runtime warnings and timestamps.
+- `class_0.xlsx … class_3.xlsx` — per-class Excel workbooks (Summary, Sample_Index of
+  reference cohort members, Prediction_Info). These **do not** contain raw training
+  expression matrices — they contain class membership indices and prediction context.
+- A **ZIP** bundling the entire run.
+
+---
+
+## 4. METRICS AND EVALUATION DEEP DIVE
+
+This system uses **two families of metrics**:
+(A) **runtime prediction/decision metrics** computed for each uploaded sample, and
+(B) **model-build / clustering-quality metrics** that describe how good the underlying
+clusters are (fixed at build time). Both are explained below.
+
+> **Note on the confidence formula.** In the running `v3` code, distance confidence uses the
+> **second-nearest** distance in the denominator and is clipped to [0, 1]:
+> `confidence = (d₂ − d₁) / d₂`, clipped. (Some older documentation/tooltips describe a
+> `(d₂ − d₁)/d₁` form; the authoritative behavior is the clipped `v3` version above.)
+
+### A. RUNTIME PREDICTION & DECISION METRICS
+
+#### 4.1 Feature Coverage
+- **Measures:** the fraction of a branch's required genes (500 for A/B, 2000 for C) actually
+  found in the uploaded sample after exact + version-stripped matching. Range 0–1.
+- **Why critical:** the pre-trained scaler/PCA/centroids assume a fixed gene vector. Missing
+  genes are zero-filled, which distorts the projection. Coverage quantifies how much of the
+  model's expected signal is genuinely present.
+- **High (→1.00):** all required genes present; the projection is trustworthy.
+- **Low (<0.60):** the branch is **skipped** entirely. Moderate coverage reduces the branch's
+  vote weight (coverage is a direct multiplier in the weight formula).
+
+#### 4.2 Distance (Centroid Proximity)
+- **Measures:** Euclidean distance in the branch's 5-D PCA space from the sample to each
+  cluster centroid. Smaller = more similar.
+- **Why critical:** the **nearest** centroid *is* the raw cluster call; distances are the raw
+  geometric evidence behind every downstream metric.
+- **High value = far:** the sample doesn't resemble that cluster. **Low value = close:** strong
+  resemblance. The full distance vector (not just the winner) feeds soft support.
+
+#### 4.3 Distance Confidence
+- **Formula:** `(d₂ − d₁) / d₂`, clipped to [0, 1] (margin between the nearest and
+  second-nearest centroid).
+- **Measures:** how *decisively* the sample belongs to its nearest cluster versus the runner-up.
+- **Why critical:** a sample can be "nearest" to a cluster by a hair. Confidence separates a
+  clear assignment from a borderline one, and is a multiplier in the vote weight.
+- **High (→1):** the sample is far closer to one centroid than any other — a confident,
+  unambiguous cluster. **Low (→0):** the two nearest centroids are almost equidistant — the
+  branch is on a decision boundary and its vote should count for little. (Confidence < 0.1
+  triggers an explicit warning.)
+
+#### 4.4 Mapping Purity
+- **Measures:** how consistently a branch's **raw cluster** corresponded to a single **shared
+  class** across the 328-sample reference cohort (from the alignment table). Range 0–1.
+- **Why critical:** raw clusters must be translated into the shared 4-class space to be
+  comparable. If a raw cluster historically mapped cleanly to one shared class, that
+  translation is trustworthy; if it split across classes, it is not. Purity is a multiplier
+  in the vote weight.
+- **High (→1.00, e.g. Branch C cluster 1 = 1.000):** the mapping is reliable. **Low (<0.80,
+  e.g. Branch A cluster 2 = 0.727):** the mapping is ambiguous; a warning is emitted and the
+  branch's influence is reduced.
+
+#### 4.5 Branch Reliability (method-level)
+- **Measures:** a **constant** multiplier reflecting how rigorous the branch's normalization
+  is. Branch A and B = **1.00**; Branch C = **0.85**.
+- **Why critical:** Branch C uses an *approximate* `log2(count+1)` proxy instead of true
+  cohort-based DESeq2 VST. The 0.85 factor **structurally de-weights** this less-rigorous path
+  by 15% so it cannot dominate the more principled branches.
+- **Interpretation:** it is not sample-dependent — it is a built-in trust discount for the
+  approximation.
+
+#### 4.6 Outlier Ratio & Outlier Penalty
+- **Outlier ratio:** `best_distance / median_distance` — how far the sample sits from its
+  nearest centroid relative to the typical spread of all centroids.
+- **Outlier penalty (tiered):** `≤0.60 → 1.00`, `≤0.85 → 0.85`, `≤1.00 → 0.70`, `>1.00 → 0.50`.
+- **Why critical:** prevents "forced" classification. A sample geometrically far from all
+  clusters (an outlier / novel profile) should not be assigned with full confidence just
+  because one centroid is marginally closest. The penalty is a multiplier in the vote weight.
+- **High penalty (1.00):** the sample sits comfortably inside the cluster structure. **Low
+  penalty (0.50):** the sample is a boundary/outlier case; its vote is halved.
+
+#### 4.7 Final Vote Weight
+- **Formula:** `confidence × mapping_purity × feature_coverage × branch_reliability ×
+  outlier_penalty`.
+- **Measures:** the total trustworthiness-adjusted strength of a branch's single vote.
+- **Why critical:** this is the core of the "reliability-weighted consensus." It lets a
+  high-quality branch override low-confidence noise from another branch and is summed per
+  subtype to pick the weighted winner.
+- **High:** a confident, pure, well-covered, in-distribution, rigorous branch. **Low:** any
+  weak link (ambiguous boundary, impure mapping, missing genes, outlier, or the Branch-C
+  discount) drags the whole weight down multiplicatively.
+
+#### 4.8 Soft Subtype Support
+- **Formula (per branch, per class):** normalized **inverse distance**
+  `1/(d+ε)` to each cluster, mapped to shared classes, then multiplied by
+  `purity × coverage × reliability × outlier_penalty` and summed across branches.
+- **Measures:** a **continuous** support profile over *all four* subtypes (not just the hard
+  winner).
+- **Why critical:** hard nearest-centroid assignment discards information. Soft support acts as
+  a **safety check** — it reveals whether the runner-up subtype is a near-tie or a distant
+  second, and it is one of the three "views" the decision policy must reconcile.
+- **High for one class / low for others:** clean separation. **Similar across classes:**
+  genuine ambiguity.
+
+#### 4.9 Weighted Margin & Soft-Support Margin
+- **Weighted margin:** `top weighted sum − second weighted sum`.
+- **Soft margin:** `top soft support − second soft support`.
+- **Why critical:** these are the **decisiveness gates** of the final call. Even a "winning"
+  subtype is downgraded to `low_margin_uncertain` if **either** margin `< 0.05`. A weighted
+  margin `< 0.15` keeps the prediction but flags reduced reliability.
+- **High margin:** a clear, well-separated winner. **Low margin (<0.05):** the top two
+  subtypes are effectively tied → the system refuses to over-commit and returns uncertain.
+
+#### 4.10 Cross-Branch Agreement
+- **Measures:** how many of the completed branches map to the same final subtype (e.g. 3/3, 2/3).
+- **Why critical:** concordance across independent normalizations is the strongest evidence of
+  a real biological signal rather than a normalization artifact.
+- **3/3:** highest certainty (full concordance path). **2/3:** majority with one dissenter.
+  **1/1/1 split:** a tie that must be resolved by weighted + soft evidence or labeled uncertain.
+
+### B. MODEL-BUILD / CLUSTERING-QUALITY METRICS
+
+These are recorded in `selected_model_metrics_standardized.tsv` and describe the fixed quality
+of each branch's KMeans clustering (they are exported with each run for transparency but are not
+recomputed per sample).
+
+#### 4.11 Silhouette Score
+- **Measures:** for each sample, how well it fits its own cluster vs. the nearest other cluster;
+  range −1 to +1. (Branch A ≈ 0.266, Branch B ≈ 0.297, Branch C ≈ 0.262.)
+- **Why critical:** validates that the 4-cluster structure is real and separable — the whole
+  prediction rests on the assumption that these clusters are meaningful.
+- **High (→1):** dense, well-separated clusters. **Low (→0):** overlapping clusters / weak
+  structure (values ~0.26–0.30 indicate modest but real transcriptomic separation, typical of
+  biological RNA-seq subtyping).
+
+#### 4.12 Davies–Bouldin Index
+- **Measures:** average ratio of within-cluster scatter to between-cluster separation; **lower
+  is better**. (A ≈ 1.40, B ≈ 1.24, C ≈ 1.36.)
+- **Why critical:** complements silhouette as a compactness/separation check.
+- **Low:** compact, well-separated clusters. **High:** clusters are diffuse or overlapping.
+
+#### 4.13 Calinski–Harabasz Index (Variance Ratio)
+- **Measures:** ratio of between-cluster to within-cluster dispersion; **higher is better**.
+  (A ≈ 185.7, B ≈ 152.2, C ≈ 112.9.)
+- **Why critical:** larger values mean the clustering explains more of the total variance — the
+  subtypes capture strong structure in the data.
+- **High:** strong, well-defined partitions. **Low:** weak partitioning.
+
+#### 4.14 Balance Score / Cluster Sizes
+- **Measures:** how evenly samples are distributed across the four clusters. (A ≈ 0.677,
+  B ≈ 0.638, C ≈ 0.559; class sizes 84/103/64/77 across 328 samples.)
+- **Why critical:** a heavily imbalanced clustering can produce a "dominant" class that
+  swallows samples. Balance indicates the subtypes are substantive groups, not artifacts.
+- **High (→1):** evenly sized subtypes. **Low:** one subtype dominates.
+
+#### 4.15 Inertia / Combined & Final Score
+- **Inertia:** KMeans within-cluster sum of squares (e.g. Branch A ≈ 35,699) — lower is tighter.
+- **Combined/final score:** internal composite rankings used during model selection to pick the
+  best clustering per branch. They are provenance/selection metadata, not per-sample outputs.
+
+#### 4.16 Reproduction (Validation) Accuracy
+- **Value:** **92.5%** on a 40-sample validation set (10 per class), per the build report.
+- **Measures:** how faithfully the deployed nearest-centroid predictor reproduces the original
+  training cluster assignments.
+- **Why critical:** this is the closest thing to a classic accuracy figure for the system. It
+  confirms the frozen artifacts (scaler/PCA/centroids) reliably re-derive known labels.
+- **High (92.5%):** the pipeline is stable and reproducible. A low value would mean the saved
+  projection space no longer matches the data it was built on.
+
+> **Metrics deliberately NOT used:** Because the model is **unsupervised clustering** on
+> transcriptomic data (not object detection or supervised diagnosis), classic supervised /
+> vision metrics such as **Precision, Recall, F1, ROC-AUC, mAP, mAP50, IoU** are **not
+> applicable** and are intentionally absent. There are no ground-truth clinical labels or
+> bounding boxes to score against; the trustworthiness of a call is instead expressed through
+> the reliability-weight components (§4.1–4.10) and the cluster-quality metrics (§4.11–4.16).
+
+---
+
+## 5. CODE COMPONENT BREAKDOWN
+
+### 5.1 Backend (`backend/`)
+
+- **`main.py`** — The FastAPI application (the only backend code file). Defines:
+  - `GET /api/health` — returns predictor path + model dir (used to verify the server is up).
+  - `POST /api/predict` — saves the upload, runs the **v3 predictor** subprocess with
+    `--predict_one --new_sample <file> --enable_branch_C_approx --save_outputs`, locates and
+    copies the newest output folder into `server_runs/`, parses all artifacts, computes the
+    **supplementary QC block** (rows, columns, library size, TPM sum, preview), cleans NaNs,
+    and returns the consolidated JSON.
+  - `GET /api/download/{run_id}` — zips and returns the whole run.
+  - `GET /api/download/{run_id}/{filename}` — returns a single artifact.
+  - Contains the hard-coded `BASE_PATH` and the logic that selects `inshalllahsonmodel_v3`
+    (falling back to v2 / base if v3 is absent). CORS is fully open (`allow_origins=["*"]`).
+- **`requirements.txt`** — Python deps: fastapi, uvicorn, python-multipart, pandas, openpyxl,
+  scikit-learn, joblib.
+- **`.env.example`** — sample env vars (PORT, HOST, optional MODEL_DIR override). Note: the
+  README mentions a hard-coded `API_URL`; no `.env` is actually loaded by `main.py`.
+- **`uploads/`** — raw files as uploaded (input staging).
+- **`server_runs/`** — per-run copies of the predictor's output folders, served for download.
+- **`.venv/`** — the Python virtual environment used to run Uvicorn.
+
+### 5.2 Frontend (`frontend/`)
+
+- **`src/App.tsx`** — The entire single-page application (all UI + logic in one component):
+  - The `MetricTooltip` component + `TOOLTIP_CONTENT` dictionary (the scientific glossary shown
+    on hover for every metric — Branch definitions, PCA, centroid distance, purity, vote weight,
+    soft support, etc.).
+  - The upload zone (drag-drop + file picker), the animated pipeline state machine (Framer
+    Motion), the Axios call to `POST /api/predict`, and all result-dashboard sections (final
+    decision, QC, pipeline diagram, branch matrix, voting bars, soft support, diagnostics
+    accordion, downloads, disclaimers).
+  - `API_URL = 'http://localhost:8001/api'` is hard-coded here.
+- **`src/main.tsx`** — React entry point; mounts `<App/>` into the DOM.
+- **`src/App.css` / `src/index.css`** — global styles / Tailwind layer + custom classes
+  (`glass-panel`, scrollbars).
+- **`index.html`** — Vite HTML shell.
+- **`vite.config.ts`** — Vite config (React plugin).
+- **`package.json` / `package-lock.json`** — dependency manifest (React 19, Tailwind 4,
+  Framer Motion, Axios, Recharts, lucide-react, TypeScript, ESLint).
+- **`tsconfig*.json`, `eslint.config.js`, `postcss.config.js`** — TypeScript, lint, and
+  PostCSS/Tailwind build configuration.
+- **`public/` & `src/assets/`** — static assets (logo, favicon, hero image, icons).
+- **`dist/`** — a previously built production bundle (optional; dev uses Vite directly).
+
+### 5.3 Local model copy (`inshalllahsonmodel/` — reference/legacy)
+
+> This copy is **not executed by the website** (the backend runs the external `v3`). It is the
+> older, simpler predictor kept for reference; its `SON_DIR` even points at a non-v3 path.
+
+- **`inshalllahsonmodel_predictor.py`** — the **base** predictor: branch preprocessing +
+  nearest-centroid + **plain majority voting** (no purity weighting, outlier penalty, soft
+  support, or subtype naming — those exist only in v3).
+- **`artifacts/`** — per-branch pre-trained model files: `Branch_{A,B,C}_gene_list.tsv`,
+  `_scaler.joblib`, `_pca.joblib`, `_centroids.tsv` (the frozen scaler, PCA, centroids, and
+  selected genes).
+- **`reference_tables/`** — the lookup tables:
+  - `branch_to_consensus_alignment.tsv` — raw cluster → shared class + purity.
+  - `branch_only_consensus_labels.tsv` — the 328-sample consensus class assignments.
+  - `selected_model_metrics_standardized.tsv` — clustering-quality metrics (§4.11–4.15).
+  - `master_rawfile_sample_mapping.tsv`, `branch_*_assignments_standardized.tsv`, etc.
+  - (The **v3** table set additionally includes `v2_branch_mapping_reliability.tsv`,
+    `final_class_subtype_name_map.tsv`, `v2_voting_policy.tsv`, and metadata-consistency tables
+    that power the richer v3 metrics.)
+- **`outputs/`** — example prediction bundles.
+- **`reports/`** — build/audit documentation:
+  - `inshalllahsonmodel_full_workflow_for_website.txt` — the authoritative end-to-end workflow
+    spec (the primary source for this document).
+  - `inshalllahsonmodel_build_report.txt` — build details + the 92.5% validation accuracy.
+  - `inshalllahsonmodel_website_visualization_plan.txt`, `..._workflow_mermaid_diagram.txt`,
+    branch/consensus audit reports.
+- **`validation/`** — training-sample re-prediction validation TSV + report.
+- **`README_inshalllahsonmodel.txt`** — model-level readme.
+
+### 5.4 Documentation & audit files (repo root of `website_3`)
+
+- **`README.md`** — how-to-run (backend on 8001, frontend on 5173), model target, input/output
+  summary, scientific caveats.
+- **`RUN_WEBSITE_REPORT.txt`** — an auto-generated run report (detected stack, ports, startup
+  commands, system versions).
+- **`website_audit_report.txt`, `website_fix_plan.txt`, `remove_model_name_report.txt`,
+  `branch_visualization_*_report.txt`, `frontend/tooltip_visibility_fix_report.txt`** —
+  development audit/change logs documenting UI iterations and fixes.
+- **`kanser-arastirma-1a-1.png`** — a project/architecture image asset.
+
+---
+
+## 6. END-TO-END SUMMARY (one paragraph)
+
+A researcher uploads a single STAR-aligned GBM RNA-seq counts file to a React/Vite web UI.
+The FastAPI backend saves it and runs the `inshalllahsonmodel_v3` Python predictor, which
+strips technical rows, aligns genes, and processes the sample through three independent
+normalization branches (log2TPM, log2CPM, log2-count VST-proxy). Each branch standardizes the
+data, projects it into a pre-trained 5-D PCA space, finds the nearest KMeans centroid (its raw
+cluster), and translates that into a shared 4-class subtype space using a purity-annotated
+alignment table. Every branch's vote is weighted by `confidence × purity × coverage ×
+reliability × outlier_penalty`, and a decision policy reconciles the unweighted-majority,
+weighted, and inverse-distance soft-support "views," applying margin guards to avoid
+over-committing on close calls. The backend parses the predictor's output bundle, adds a
+supplementary QC summary, and returns one JSON payload. The frontend renders an animated,
+fully-explained dashboard — final subtype, per-branch matrix, voting bars, soft support,
+distance diagnostics, and downloadable TSV/JSON/Excel artifacts — with persistent disclaimers
+that the result is an **exploratory computational classification for research only, not a
+clinical diagnosis**.

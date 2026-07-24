@@ -1,0 +1,616 @@
+INSHALLAHSONMODEL FULL WORKFLOW FOR WEBSITE
+===========================================
+
+Audit basis
+-----------
+This document was prepared by reading the following implementation and audit assets without modifying them:
+
+- Base package: `inshalllahsonmodel/inshalllahsonmodel_predictor.py`
+- Enhanced audited package: `inshalllahsonmodel_v2/inshalllahsonmodel_predictor.py`
+- V2 reports: build report, branch audit report, branch-only consensus build report, rawfile mapping audit report, Branch C approximation note, tie handling policy
+- V2 reference tables: branch-to-consensus alignment, branch-only consensus labels, mapping reliability, subtype name map, runtime metadata, voting policy, master rawfile mapping
+- Example V2 output bundle under `inshalllahsonmodel_v2/outputs/...`
+- Real GDC/STAR raw RNA-seq example file under `rawdata/`
+
+Important scope note
+--------------------
+Two closely related predictors were found:
+
+1. `inshalllahsonmodel`
+   - Simpler predictor.
+   - Uses branch prediction plus mapped-class majority voting.
+
+2. `inshalllahsonmodel_v2`
+   - Audited successor to the base package.
+   - Keeps the same branch preprocessing artifacts.
+   - Adds mapping-purity awareness, weighted voting, deterministic tie handling, subtype naming, and richer reporting.
+
+Because the request explicitly asked to check V2 if available, the workflow below describes the V2 runtime as the primary website workflow. Where the base package differs, this is stated explicitly.
+
+
+1. System Overview
+------------------
+`inshalllahsonmodel` is an independent transcriptomic subtype prediction package for a new GBM RNA-seq sample. It does not retrain clustering when a new file is provided. Instead, it applies three prebuilt branch-specific preprocessing and projection pipelines, compares the new sample with saved branch centroids, maps branch-specific raw clusters into a shared final class space, and then makes a final computational subtype decision.
+
+Core components confirmed from the audited files:
+
+- Branch A input style: TPM-based
+- Branch B input style: CPM-based from raw counts
+- Branch C input style: approximate single-sample log2-count proxy for VST mode
+- Shared class space: 4 final classes
+- User-facing subtype labels:
+  - Class 0 -> Subtype Alpha
+  - Class 1 -> Subtype Beta
+  - Class 2 -> Subtype Gamma
+  - Class 3 -> Subtype Delta
+
+Consensus reference set:
+
+- The branch-only consensus was built from 328 training samples.
+- Consensus method reported in the build report: Evidence Accumulation Clustering on a co-association matrix, followed by average-linkage hierarchical clustering.
+- Final class sizes from the consensus build report:
+  - Class 0: 84
+  - Class 1: 103
+  - Class 2: 64
+  - Class 3: 77
+
+
+2. User Input Stage
+-------------------
+The user provides one raw GDC/STAR augmented gene-count TSV file.
+
+Observed real file format:
+
+- First comment line may exist, for example `# gene-model: GENCODE v36`
+- Tab-separated table
+- Technical rows appear first
+- Then gene-level ENSG rows follow
+
+Observed columns in a real raw file:
+
+- `gene_id`
+- `gene_name`
+- `gene_type`
+- `unstranded`
+- `stranded_first`
+- `stranded_second`
+- `tpm_unstranded`
+- `fpkm_unstranded`
+- `fpkm_uq_unstranded`
+
+Observed technical rows in a real file:
+
+- `N_unmapped`
+- `N_multimapping`
+- `N_noFeature`
+- `N_ambiguous`
+
+Sample identifier handling in code:
+
+- The predictor extracts the sample ID from the input filename basename.
+- It uses the text before the first period.
+- Example:
+  - File name: `8a3c7c61-631f-4dd0-83fe-d2bbb33a17a4.rna_seq.augmented_star_gene_counts.tsv`
+  - Extracted sample ID: `8a3c7c61-631f-4dd0-83fe-d2bbb33a17a4`
+
+
+3. Raw File Validation Stage
+----------------------------
+What the code actually does:
+
+1. Attempts to read the file with `pandas.read_csv(..., sep='\t', comment='#')`
+2. Removes the four technical rows listed above
+3. Keeps only rows whose first column starts with `ENSG`
+4. Sets `gene_id` as index
+5. Extracts:
+   - raw counts from `unstranded` if present, otherwise the first numeric column
+   - TPM from `tpm_unstranded` if present, otherwise `None`
+6. Converts extracted series to numeric
+
+Validation outcomes visible in runtime behavior:
+
+- If the file cannot be read, prediction stops
+- If Branch A has no TPM column, Branch A is skipped
+- If Branch C approximation is not enabled, Branch C is skipped
+- If matched feature coverage is below 60% for a branch, that branch is skipped
+
+What is not explicitly implemented in the predictor code:
+
+- No dedicated preflight report of total gene rows
+- No dedicated preflight report of TPM sum
+- No explicit "required column checklist" report beyond branch-specific use
+- No explicit duplicate gene check
+
+Website wording recommendation:
+
+- Show a distinction between:
+  - "Predictor-required validation actually performed"
+  - "Supplementary QC summaries for user interpretation"
+
+Needs verification:
+
+- If the website displays TPM sum, raw count total, or gene-row count, that would be an extra UI/QC layer. Those summaries are not explicitly written by the current predictor code.
+
+
+4. Branch A Workflow - log2TPM
+------------------------------
+Confirmed runtime steps:
+
+1. Load Branch A artifacts:
+   - selected gene list
+   - scaler
+   - PCA model
+   - centroid table
+
+2. Input feature source:
+   - `tpm_unstranded`
+
+3. Feature alignment:
+   - Try exact gene ID matching first
+   - If exact matching covers less than 95% of required genes, retry using version-stripped ENSG IDs
+   - Missing genes are filled with 0
+
+4. Transformation:
+   - `log2(TPM + 1)`
+
+5. Coverage rule:
+   - If aligned feature coverage is below 60%, Branch A is skipped
+
+6. Standardization:
+   - Apply the saved Branch A scaler
+
+7. PCA projection:
+   - Apply the saved Branch A PCA model
+
+8. Distance-to-centroid step:
+   - Compute Euclidean distance from the projected sample to each Branch A centroid
+
+9. Raw Branch A cluster assignment:
+   - Choose the nearest centroid
+
+10. Branch A confidence:
+   - Relative distance confidence
+   - Formula used in code:
+     `(second_best_distance - best_distance) / best_distance`
+
+Branch A selected model metadata:
+
+- Standardized metrics table says `pca_5_genes_500`
+- Therefore the website can describe Branch A as a 500-gene PCA5 branch
+
+Important audit note:
+
+- Branch A metadata inconsistency exists
+  - some metrics files describe K=4
+  - runtime artifacts and mapping tables show 5 raw Branch A clusters: 0, 1, 2, 3, 4
+- V2 explicitly chose runtime consistency and uses the artifact-derived cluster count
+
+Website warning:
+
+- Raw Branch A clusters are not the final shared classes
+- They must be mapped before voting
+
+
+5. Branch B Workflow - log2CPM
+------------------------------
+Confirmed runtime steps:
+
+1. Load Branch B artifacts:
+   - selected gene list
+   - scaler
+   - PCA model
+   - centroid table
+
+2. Input feature source:
+   - `unstranded` raw counts
+
+3. Feature alignment:
+   - Exact gene matching first
+   - Version-stripped ENSG fallback if needed
+   - Missing genes filled with 0
+
+4. Library-size normalization:
+   - CPM is computed as:
+     `matched_counts / raw_counts_sum * 1,000,000`
+
+5. Transformation:
+   - `log2(CPM + 1)`
+
+6. Coverage rule:
+   - Skip if aligned feature coverage is below 60%
+
+7. Standardization:
+   - Apply saved Branch B scaler
+
+8. PCA projection:
+   - Apply saved Branch B PCA model
+
+9. Distance-to-centroid step:
+   - Compute Euclidean distances to Branch B centroids
+
+10. Raw Branch B cluster assignment:
+   - Choose the closest centroid
+
+11. Branch B confidence:
+   - Same relative distance confidence formula used for Branch A
+
+Branch B selected model metadata:
+
+- Standardized metrics table says `pca_5_genes_500`
+- The website can describe Branch B as a 500-gene PCA5 branch
+
+
+6. Branch C Workflow - approximate VST proxy
+--------------------------------------------
+Confirmed runtime steps:
+
+1. Load Branch C artifacts:
+   - selected gene list
+   - scaler
+   - PCA model
+   - centroid table
+
+2. Input feature source:
+   - `unstranded` raw counts
+
+3. Activation rule:
+   - Branch C runs only if `--enable_branch_C_approx` is provided
+   - Otherwise Branch C is skipped with reason `no_approx_flag`
+
+4. Feature alignment:
+   - Exact gene matching first
+   - Version-stripped ENSG fallback if needed
+   - Missing genes filled with 0
+
+5. Transformation actually used in code:
+   - `log2(raw_counts + 1)`
+
+6. Important scientific clarification:
+   - This is not true DESeq2 VST
+   - V2 documents it as an approximate single-sample proxy because true DESeq2 VST depends on multi-sample dispersion estimation
+
+7. Coverage rule:
+   - Skip if aligned feature coverage is below 60%
+
+8. Standardization:
+   - Apply saved Branch C scaler
+
+9. PCA projection:
+   - Apply saved Branch C PCA model
+
+10. Distance-to-centroid step:
+   - Compute Euclidean distances to Branch C centroids
+
+11. Raw Branch C cluster assignment:
+   - Choose the closest centroid
+
+12. Branch C confidence:
+   - Same relative distance confidence formula as other branches
+
+Branch C selected model metadata:
+
+- Standardized metrics table says `pca_5_genes_2000`
+- The website can describe Branch C as a 2000-gene PCA5 branch
+
+Important user warning:
+
+- Website text should explicitly say:
+  "Approximate single-sample log2-count proxy was used for Branch C; this is not true DESeq2 VST."
+
+
+7. Branch Cluster Mapping Stage
+-------------------------------
+Why this stage exists:
+
+- Raw branch cluster labels come from independently trained branch models
+- Therefore raw cluster numbers are not directly comparable across branches
+- Example:
+  - Branch A raw cluster 2 and Branch C raw cluster 2 do not mean the same biology until mapped
+
+The shared class mapping is loaded from:
+
+- `reference_tables/branch_to_consensus_alignment.tsv`
+
+Confirmed mapping table used by V2:
+
+Branch A raw clusters:
+- 0 -> shared class 0, purity 0.893333
+- 1 -> shared class 3, purity 0.973684
+- 2 -> shared class 1, purity 0.727273
+- 3 -> shared class 1, purity 0.964286
+- 4 -> shared class 2, purity 0.954545
+
+Branch B raw clusters:
+- 0 -> shared class 0, purity 0.838710
+- 1 -> shared class 3, purity 0.972603
+- 2 -> shared class 1, purity 0.934783
+- 3 -> shared class 2, purity 0.914286
+
+Branch C raw clusters:
+- 0 -> shared class 0, purity 0.976471
+- 1 -> shared class 2, purity 1.000000
+- 2 -> shared class 1, purity 0.990196
+- 3 -> shared class 3, purity 0.916667
+
+Reliability layer:
+
+- V2 also loads `v2_branch_mapping_reliability.tsv`
+- For each raw branch cluster, the table provides:
+  - mapping purity
+  - reliability class
+  - warning text
+
+Observed reliability examples:
+
+- Branch A raw cluster 2 -> low reliability
+- Branch A raw cluster 0 -> moderate reliability
+- Branch B raw cluster 0 -> moderate reliability
+- Most other mappings -> high reliability
+
+Website explanation:
+
+- Mapping purity quantifies how consistently a raw branch cluster corresponded to one shared class in the reference cohort
+- Lower mapping purity means the branch vote is less trustworthy after mapping
+
+
+8. Final Voting Stage
+---------------------
+Base package behavior:
+
+- `inshalllahsonmodel` uses simple majority voting on mapped shared classes
+
+V2 behavior:
+
+- `inshalllahsonmodel_v2` still starts from branch mapped classes, but adds confidence-aware weighting and deterministic tie handling
+
+Confirmed V2 voting mechanics:
+
+1. Each completed branch contributes one mapped shared class vote
+
+2. Unweighted vote counts are accumulated
+
+3. Weighted vote sums are also accumulated using:
+   `branch_weight = distance_confidence * mapping_purity * approximation_penalty`
+
+4. Approximation penalty:
+   - Branch C gets a 0.85 penalty when approximate mode is used
+   - Other branches use 1.0
+
+5. Primary decision hierarchy:
+   - First look for a unique unweighted majority
+   - If there is an unweighted tie, compare weighted vote sums
+   - If weighted margin is below 0.05 in an unweighted tie, return `uncertain`
+
+6. Weighted override rule:
+   - Even when there is an unweighted majority, V2 can override it if:
+     - weighted winner differs from the majority winner
+     - weighted margin is at least 0.15
+
+7. Final outputs from the voting stage:
+   - final shared class
+   - final subtype name
+   - decision status (`predicted` or `uncertain`)
+   - decision reason
+   - unweighted winner
+   - weighted winner
+   - weighted margin
+
+Example interpretation for website viewers:
+
+- 3/3 agreement -> very clear cross-branch consensus
+- 2/3 agreement -> majority support, but one branch disagrees
+- 1/1/1 split -> tie, must be resolved by weighted evidence or labeled uncertain
+
+Needs verification:
+
+- `v2_tie_handling_policy.txt` lists outcome labels `low_margin_uncertain` and `tie_uncertain`
+- The runtime code itself uses only `predicted` or `uncertain`
+- The website should therefore follow the runtime code unless the predictor is later updated
+
+
+9. Confidence and Reliability Stage
+-----------------------------------
+Branch-level quantities actually reported:
+
+- raw cluster
+- mapped shared class
+- mapped subtype
+- distance confidence
+- mapping purity
+- final vote weight
+- mapping reliability class
+- branch warning text if available
+
+Final-level quantities actually reported:
+
+- unweighted majority result
+- weighted vote winner
+- weighted margin
+- final predicted subtype
+- decision status
+
+Warnings explicitly printed/written by V2:
+
+- Branch C approximate proxy warning
+- Low branch distance confidence warning if confidence < 0.1
+- Low mapping purity warning if purity < 0.8
+
+Suggested website badges:
+
+- High / moderate / low mapping reliability
+- Approximate transformation badge for Branch C
+- Disagreement badge when not all branches support the same final class
+- Uncertain badge when decision status is uncertain
+
+
+10. Output Generation Stage
+---------------------------
+Confirmed V2 output folder pattern:
+
+- `outputs/<sample_id>_<timestamp>/`
+
+Confirmed files written by V2 when `--save_outputs` is used:
+
+- `class_0.xlsx`
+- `class_1.xlsx`
+- `class_2.xlsx`
+- `class_3.xlsx`
+- `selected_model_metrics_used.tsv`
+- `rawfile_export_audit.tsv`
+- `branch_predictions.tsv`
+- `centroid_distances.tsv`
+- `voting_decision.tsv`
+- `prediction_summary.json`
+- `prediction_summary.txt`
+- `mapping_reliability.tsv`
+- `warning_report.txt`
+- `run_log.txt`
+
+What the class Excel files actually contain in V2:
+
+- Sheet `Summary`
+- Sheet `Sample_Index`
+- Sheet `Prediction_Info`
+
+Important clarification:
+
+- The V2 class Excel files do not embed the full raw training RNA-seq tables
+- They contain a class-specific index of reference samples from `branch_only_consensus_labels.tsv`, plus prediction context
+
+Per-file purpose:
+
+- `branch_predictions.tsv`
+  - one row per branch
+  - raw cluster, mapped class, subtype, confidence, purity, weight, warnings
+
+- `centroid_distances.tsv`
+  - one row per branch
+  - distance to each centroid
+
+- `voting_decision.tsv`
+  - one row per candidate class
+  - unweighted vote count, weighted sum, subtype name, final_selected flag
+
+- `prediction_summary.json`
+  - machine-readable full decision summary
+
+- `prediction_summary.txt`
+  - human-readable final summary
+
+- `mapping_reliability.tsv`
+  - branch raw cluster to mapped class reliability summary for this run
+
+- `warning_report.txt`
+  - runtime warnings
+
+- `run_log.txt`
+  - timestamped run metadata
+
+
+11. Final User Output
+---------------------
+Observed terminal output style in V2:
+
+1. A header with the sample ID
+2. A branch-by-branch section
+3. A voting section
+4. A warnings section
+5. Output folder confirmation if saving is enabled
+
+Representative terminal structure:
+
+- Branch A:
+  - Raw cluster
+  - Mapped shared class
+  - Mapped subtype
+  - Distance confidence
+  - Mapping purity
+  - Final vote weight
+  - Mapping reliability
+
+- Branch B:
+  - same fields
+
+- Branch C:
+  - same fields
+  - explicit note that approximate log2-count proxy was used
+
+- Voting:
+  - unweighted majority vote
+  - weighted vote winner
+  - weighted margin
+  - final predicted subtype
+  - decision status
+
+Representative saved text summary format:
+
+- Sample ID
+- Final Decision
+- Final Predicted Subtype
+- Final Shared Class
+- Reason
+- Branch detail lines such as:
+  - `Branch_A: Raw=2, Mapped=1, Weight=0.150, Purity=0.727, Conf=0.207`
+
+Website-facing explanation:
+
+- The final subtype displayed to the user is the mapped shared class and subtype label, not the raw branch cluster number
+
+
+12. Limitations and Warnings That Must Be Shown
+-----------------------------------------------
+The website should clearly show the following limitations because they are directly supported by the code and audit reports:
+
+1. Exploratory computational subtype only
+   - This is a computational classification result
+   - It is not clinical proof and not a diagnosis
+
+2. Branch C single-sample limitation
+   - Branch C uses an approximate log2-count proxy, not true DESeq2 VST
+
+3. Mapping can be lossy
+   - Raw branch clusters are converted into shared classes using an alignment table
+   - This conversion has finite purity, not perfect certainty
+
+4. Branch disagreement is biologically and technically possible
+   - Different normalizations can place the same sample differently
+
+5. Low-confidence branches should be de-emphasized
+   - Branch distance confidence can be weak even when a branch completes
+
+6. Branch A metadata inconsistency exists in source documentation
+   - Metrics files described K=4
+   - Runtime artifacts use 5 raw clusters
+   - V2 explicitly chose runtime consistency
+
+7. Synthetic-file behavior should not be interpreted biologically
+   - Synthetic stress tests are useful for pipeline QA, not subtype biology claims
+
+
+13. Website-Oriented Summary of the End-to-End Process
+------------------------------------------------------
+In website language, the pipeline can be described as:
+
+1. User uploads one GDC/STAR augmented gene-count file
+2. System reads the file and isolates gene-level count and TPM fields
+3. Technical rows are removed
+4. The same sample is processed in parallel through three normalization branches
+5. Each branch aligns the sample to its own selected reference genes
+6. Each branch transforms the data into the format used during model training
+7. Each branch standardizes the data and projects it into PCA space
+8. Each branch finds the nearest pretrained centroid and returns a raw branch cluster
+9. Raw branch clusters are translated into a shared four-class space using a reference alignment table
+10. The system combines branch votes, accounting for confidence and mapping purity in V2
+11. The system outputs a final shared class and subtype label
+12. The system saves decision tables, distance tables, warnings, and class-index Excel files
+
+
+Needs verification items
+------------------------
+1. If the final website must reflect the base `inshalllahsonmodel` predictor exactly, the voting panel should show simple majority voting only. If it must reflect the richer audited pipeline, the voting panel should show the V2 weighted process described above.
+
+2. The predictor code does not generate a dedicated upload-QC report with TPM sum, total counts, or gene-row count. If those are required on the website, they must be implemented as an additional QC layer.
+
+3. `v2_tie_handling_policy.txt` uses more granular uncertainty labels than the current code returns. Runtime behavior currently resolves only to `predicted` or `uncertain`.
+
+4. The predictor computes PCA projections internally but does not save the actual PCA coordinates to output files. The website can display centroid distances directly from `centroid_distances.tsv`, but explicit plotted coordinates would require either additional export or on-the-fly recomputation.

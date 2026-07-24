@@ -1,0 +1,13 @@
+SON_MODEL CONSENSUS PREDICTION SUMMARY
+========================================
+Sample: 54f5fb74-d1b8-4ad8-a1d3-2949ef36653f
+Final Decision: predicted
+Final Predicted Subtype: Subtype Gamma
+Reason: full concordance between majority, weighted, and soft support
+
+Voting Margins: Weighted=0.370, Soft=0.428
+
+Branch Details:
+- Branch_A: Raw=2, Mapped=2, Weight=0.092, Purity=0.727, Conf=0.149, Outlier=0.850
+- Branch_B: Raw=1, Mapped=1, Weight=0.113, Purity=0.973, Conf=0.137, Outlier=0.850
+- Branch_C: Raw=2, Mapped=2, Weight=0.391, Purity=0.990, Conf=0.465, Outlier=1.000
