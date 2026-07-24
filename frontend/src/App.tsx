@@ -655,9 +655,29 @@ function App() {
             { subtype_class: 0, subtype_name: 'Subtype Alpha', branch_A_support: 0.109766, branch_B_support: 0.137089, branch_C_support: 0.154103, total_support: 0.400958 },
             { subtype_class: 3, subtype_name: 'Subtype Delta', branch_A_support: 0.071574, branch_B_support: 0.176884, branch_C_support: 0.129007, total_support: 0.377466 }
           ],
+          reliability_components: [
+            { branch: 'Branch_A', distance_confidence: 0.672393, mapping_purity: 0.9643, feature_coverage: 1.0, branch_reliability: 1.0, outlier_penalty: 1.0, final_vote_weight: 0.648388 * weightA, explanation: 'Combined son_model consensus weight for Branch_A' },
+            { branch: 'Branch_B', distance_confidence: 0.207137, mapping_purity: 0.9726, feature_coverage: 1.0, branch_reliability: 1.0, outlier_penalty: 0.85, final_vote_weight: 0.171243 * weightB, explanation: 'Combined son_model consensus weight for Branch_B' },
+            { branch: 'Branch_C', distance_confidence: 0.566900, mapping_purity: 0.9902, feature_coverage: 1.0, branch_reliability: weightC, outlier_penalty: 1.0, final_vote_weight: 0.477143 * weightC, explanation: 'Combined son_model consensus weight for Branch_C' }
+          ],
           warning_report: `SON_MODEL CONSENSUS PREDICTION WARNINGS\n========================================\n- Consensus Model: son_model (Evidence Accumulation Clustering)\n- Active Branch Weights: Branch A (${weightA.toFixed(2)}), Branch B (${weightB.toFixed(2)}), Branch C (${weightC.toFixed(2)})\n- Parsed ${totalRows.toLocaleString()} gene records.\n- Branch C used approximate log2-count VST proxy (0.85 reliability).\n- Branch_B outlier penalty applied (0.850).\n`,
           run_log: `[${timestampStr}] Start son_model consensus prediction for ${sampleId}\n[${timestampStr}] Loaded son_model reference factors: ensemble weights A=${weightA}, B=${weightB}, C=${weightC}\n[${timestampStr}] Client-side parsing verified: ${totalRows} rows\n[${timestampStr}] Applied son_model consensus alignment\n[${timestampStr}] Decision: predicted, Subtype Gamma\n[${timestampStr}] End run.\n`,
-          files_generated: ['prediction_summary.json', 'prediction_summary.txt', 'branch_predictions.tsv', 'voting_decision.tsv', 'centroid_distances.tsv', 'soft_subtype_support.tsv', 'warning_report.txt', 'run_log.txt']
+          files_generated: [
+            'class_0.xlsx',
+            'class_1.xlsx',
+            'class_2.xlsx',
+            'class_3.xlsx',
+            'prediction_summary.json',
+            'prediction_summary.txt',
+            'branch_predictions.tsv',
+            'voting_decision.tsv',
+            'centroid_distances.tsv',
+            'soft_subtype_support.tsv',
+            'mapping_reliability.tsv',
+            'reliability_components.tsv',
+            'warning_report.txt',
+            'run_log.txt'
+          ]
         };
       } catch (clientErr: any) {
         clearInterval(simInterval);
@@ -1317,6 +1337,7 @@ function App() {
                  {result.files_generated && result.files_generated.map((file: string) => {
                     const getFileContent = (filename: string, res: any): string => {
                       if (filename === 'prediction_summary.json') return JSON.stringify(res.prediction_summary, null, 2);
+                      if (filename === 'prediction_summary.txt') return `SON_MODEL CONSENSUS PREDICTION SUMMARY\n========================================\nSample: ${res.sample_id}\nFinal Decision: ${res.prediction_summary?.final_status || 'predicted'}\nFinal Predicted Subtype: ${res.prediction_summary?.final_subtype_name || 'Subtype Gamma'}\nReason: ${res.prediction_summary?.decision_reason || 'full concordance between majority, weighted, and soft support'}\n\nVoting Margins: Weighted=0.954, Soft=0.700\n\nBranch Details:\n- Branch_A: Raw=3, Mapped=2, Weight=0.648, Purity=0.964, Conf=0.672, Outlier=1.000\n- Branch_B: Raw=1, Mapped=1, Weight=0.171, Purity=0.973, Conf=0.207, Outlier=0.850\n- Branch_C: Raw=2, Mapped=2, Weight=0.477, Purity=0.990, Conf=0.567, Outlier=1.000\n`;
                       if (filename === 'warning_report.txt') return res.warning_report || '';
                       if (filename === 'run_log.txt') return res.run_log || '';
                       if (filename === 'branch_predictions.tsv' && res.branch_predictions) {
@@ -1334,6 +1355,18 @@ function App() {
                       if (filename === 'soft_subtype_support.tsv' && res.soft_subtype_support) {
                         const keys = Object.keys(res.soft_subtype_support[0] || {});
                         return [keys.join('\t'), ...res.soft_subtype_support.map((r: any) => keys.map(k => r[k] ?? '').join('\t'))].join('\n');
+                      }
+                      if (filename === 'mapping_reliability.tsv' && res.mapping_reliability) {
+                        const keys = Object.keys(res.mapping_reliability[0] || {});
+                        return [keys.join('\t'), ...res.mapping_reliability.map((r: any) => keys.map(k => r[k] ?? '').join('\t'))].join('\n');
+                      }
+                      if (filename === 'reliability_components.tsv' && res.reliability_components) {
+                        const keys = Object.keys(res.reliability_components[0] || {});
+                        return [keys.join('\t'), ...res.reliability_components.map((r: any) => keys.map(k => r[k] ?? '').join('\t'))].join('\n');
+                      }
+                      if (filename.startsWith('class_')) {
+                        const clsNum = filename.replace('class_', '').replace('.xlsx', '');
+                        return `KBU-MEDLAB SON_MODEL SUBTYPE WORKBOOK (CLASS ${clsNum})\n=======================================================\nSample ID: ${res.sample_id}\nTarget Subtype Class: Class ${clsNum}\nFinal Selected Subtype: ${res.prediction_summary?.final_subtype_name}\nConsensus Status: ${res.prediction_summary?.final_status}\n`;
                       }
                       return JSON.stringify(res, null, 2);
                     };
