@@ -1,0 +1,14 @@
+raw_label	branch	raw_cluster	consensus_class	subtype	raw_cluster_size	overlap_with_consensus	map_purity
+Branch_A_C0	A	0	0	Subtype Alpha	75	67	0.8933
+Branch_A_C1	A	1	1	Subtype Beta	76	74	0.9737
+Branch_A_C2	A	2	2	Subtype Gamma	55	40	0.7273
+Branch_A_C3	A	3	2	Subtype Gamma	56	54	0.9643
+Branch_A_C4	A	4	3	Subtype Delta	66	63	0.9545
+Branch_B_C0	B	0	0	Subtype Alpha	93	78	0.8387
+Branch_B_C1	B	1	1	Subtype Beta	73	71	0.9726
+Branch_B_C2	B	2	2	Subtype Gamma	92	86	0.9348
+Branch_B_C3	B	3	3	Subtype Delta	70	64	0.9143
+Branch_C_C0	C	0	0	Subtype Alpha	85	83	0.9765
+Branch_C_C1	C	1	3	Subtype Delta	57	57	1.0
+Branch_C_C2	C	2	2	Subtype Gamma	102	101	0.9902
+Branch_C_C3	C	3	1	Subtype Beta	84	77	0.9167

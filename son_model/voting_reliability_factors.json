@@ -1,0 +1,49 @@
+{
+  "generated": "2026-07-07 13:40:23 UTC",
+  "n_samples": 328,
+  "k_consensus": 4,
+  "random_state": 42,
+  "branch_streams": {
+    "A": "log2TPM (A3_log2TPM_strict, top-500 var genes, PCA-5)",
+    "B": "log2CPM (B2_log2CPM_standard, top-500 var genes, PCA-5)",
+    "C": "VST-proxy log2(counts+1) (top-2000 var genes, PCA-5)"
+  },
+  "branch_ensemble_weights": {
+    "A": 1.0,
+    "B": 1.0,
+    "C": 0.85
+  },
+  "branch_C_downweight_factor": 0.85,
+  "feature_coverage_rates": {
+    "A": 1.0,
+    "B": 1.0,
+    "C": 1.0
+  },
+  "mapping_purities": {
+    "A": 0.9085,
+    "B": 0.9116,
+    "C": 0.9695
+  },
+  "branch_consensus_NMI": {
+    "A": 0.7402,
+    "B": 0.7917,
+    "C": 0.9147
+  },
+  "branch_consensus_ARI": {
+    "A": 0.681,
+    "B": 0.7735,
+    "C": 0.9271
+  },
+  "margin_guard_threshold": 0.05,
+  "n_low_confidence_samples": 2,
+  "mean_voting_margin": 0.7166,
+  "mean_weighted_vote_fraction": 0.9278,
+  "fallback_outlier_penalty": {
+    "rule": "samples with weighted margin < guard are flagged low_confidence",
+    "penalty_weight": 0.15,
+    "note": "Branch C additionally carries a structural 15% VST-proxy reliability penalty realized here as the 0.85 co-association downweight."
+  },
+  "consensus_solver_selected": "Spectral clustering",
+  "consensus_silhouette_precomputed": 0.7802,
+  "cophenetic_correlation": 0.952
+}
