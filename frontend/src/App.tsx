@@ -1447,6 +1447,19 @@ function App() {
                                         <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
                                       </div>
                                     </div>
+
+                                    {/* Restored Explanatory Calculation Card */}
+                                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
+                                      <div className="font-bold text-white flex items-center justify-between">
+                                        <span>Proximity Ratio Calculation</span>
+                                        <code className="text-blue-300 font-mono font-black text-xs">
+                                          ({d2.dist.toFixed(2)} - {d1.dist.toFixed(2)}) / {d1.dist.toFixed(2)} = {confVal.toFixed(3)}
+                                        </code>
+                                      </div>
+                                      <p className="text-[10.5px] text-slate-400 leading-relaxed font-sans">
+                                        <strong className="text-slate-200">What this means:</strong> The sample's expression profile is <strong className="text-blue-300 font-mono">{(d2.dist / Math.max(d1.dist, 0.01)).toFixed(1)}× closer</strong> to {d1.cluster} than {d2.cluster}. Higher separation scores confirm that the sample sits deep within the cluster centroid rather than near a boundary.
+                                      </p>
+                                    </div>
                                   </motion.div>
                                 );
                               })()}
@@ -1540,6 +1553,22 @@ function App() {
                                       </ResponsiveContainer>
                                     </div>
                                   </div>
+
+                                  {/* Restored Explanatory Cards */}
+                                  <div className="grid grid-cols-2 gap-3 pt-1">
+                                    <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[10.5px] space-y-1">
+                                      <span className="font-bold text-emerald-300 block">Class Concordance</span>
+                                      <p className="text-slate-400 leading-snug font-sans">
+                                        <strong className="text-emerald-200 font-mono">{(purityVal * 100).toFixed(1)}%</strong> of training cohort samples assigned to Raw Cluster <code className="text-emerald-300 font-mono">C{rawCluster}</code> map consistently to <strong className="text-emerald-300">{subtypeName}</strong>.
+                                      </p>
+                                    </div>
+                                    <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-[10.5px] space-y-1">
+                                      <span className="font-bold text-slate-300 block">Biological Ambiguity</span>
+                                      <p className="text-slate-400 leading-snug font-sans">
+                                        <strong className="text-slate-300 font-mono">{((1 - purityVal) * 100).toFixed(1)}%</strong> of historical training samples showed secondary cluster co-association overlap.
+                                      </p>
+                                    </div>
+                                  </div>
                                 </motion.div>
                               )}
                             </AnimatePresence>
@@ -1624,6 +1653,30 @@ function App() {
                                         </LineChart>
                                       </ResponsiveContainer>
                                     </div>
+                                  </div>
+
+                                  {/* Restored Pipeline Method Card & Explanatory Text */}
+                                  <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/40 flex items-center justify-between">
+                                    <div>
+                                      <span className="text-[10px] text-purple-300 font-black uppercase tracking-wider block">Pipeline Method</span>
+                                      <span className="text-sm font-black text-white font-mono block">{normMethod}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-2xl font-black font-mono text-purple-300 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">
+                                        {relVal.toFixed(2)}x
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
+                                    <div className="font-bold text-white">Methodology & Transformation Weighting</div>
+                                    <p className="text-[10.5px] text-slate-400 leading-relaxed font-sans">
+                                      {branchKey === 'Branch_A'
+                                        ? 'Branch A uses direct Transcripts Per Million (TPM) normalization. Because TPM scales directly for gene length and library size without loss of variance, it receives a 1.00x full fidelity vote weight multiplier.'
+                                        : branchKey === 'Branch_B'
+                                        ? 'Branch B uses Counts Per Million (CPM) normalization on raw unstranded gene counts. It accurately preserves relative expression magnitude across library depths, earning a 1.00x full fidelity vote weight multiplier.'
+                                        : 'Branch C computes a Variance Stabilizing Transformation (VST) proxy via log2-count scaling. Because single-sample VST is an approximation proxy without multi-sample dispersion modeling, a 15% reliability penalty (0.85x multiplier) is applied during vote assembly.'}
+                                    </p>
                                   </div>
                                 </motion.div>
                               )}
