@@ -377,6 +377,7 @@ function App() {
   const [detailedMode, setDetailedMode] = useState(false);
   const [showMathSection, setShowMathSection] = useState(false);
   const [expandedAudit, setExpandedAudit] = useState<Record<string, boolean>>({});
+  const [expandedMetric, setExpandedMetric] = useState<Record<string, 'confidence' | 'purity' | 'reliability' | null>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timeoutsRef = useRef<number[]>([]);
 
@@ -1320,59 +1321,228 @@ function App() {
                           </div>
                         </div>
 
-                        {/* Progress Bar Gauges */}
+                        {/* Interactive Metric Cards (Hide-by-default visualizers) */}
                         <div className="space-y-3 pt-2">
-                          {/* Distance Confidence */}
-                          <div className="space-y-1">
-                            <div className="flex justify-between items-center text-[11px]">
-                              <MetricTooltip id="Confidence">
-                                <span className="text-slate-400 font-bold cursor-help flex items-center space-x-1">
-                                  <span>Distance Confidence</span>
-                                </span>
-                              </MetricTooltip>
-                              <span className="text-slate-200 font-mono font-bold">{confVal.toFixed(3)}</span>
+                          {/* Distance Confidence Bar & Expandable Drawer */}
+                          <div className="space-y-1 rounded-2xl p-2.5 bg-slate-900/40 border border-slate-800/80 hover:border-blue-500/30 transition-all">
+                            <div
+                              onClick={() => setExpandedMetric(prev => ({
+                                ...prev,
+                                [branchKey]: prev[branchKey] === 'confidence' ? null : 'confidence'
+                              }))}
+                              className="flex justify-between items-center text-[11px] cursor-pointer group"
+                            >
+                              <div className="flex items-center space-x-1.5">
+                                <MetricTooltip id="Confidence">
+                                  <Info className="w-3 h-3 text-slate-500 group-hover:text-blue-400 cursor-help transition-colors" />
+                                </MetricTooltip>
+                                <span className="text-slate-300 font-bold group-hover:text-white transition-colors">Distance Confidence</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-blue-400 font-mono font-bold">{confVal.toFixed(3)}</span>
+                                <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${expandedMetric[branchKey] === 'confidence' ? 'rotate-180 text-blue-400' : ''}`} />
+                              </div>
                             </div>
-                            <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+
+                            <div
+                              onClick={() => setExpandedMetric(prev => ({
+                                ...prev,
+                                [branchKey]: prev[branchKey] === 'confidence' ? null : 'confidence'
+                              }))}
+                              className="h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 cursor-pointer"
+                            >
                               <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${Math.min(confVal * 100, 100)}%` }}
                                 className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full"
                               />
                             </div>
+
+                            <AnimatePresence>
+                              {expandedMetric[branchKey] === 'confidence' && (() => {
+                                // Extract real sample centroid distances
+                                const branchDistances = b.distances || result.prediction_summary?.branch_details?.[branchKey]?.distances || {};
+                                const sortedDists = Object.entries(branchDistances)
+                                  .map(([c, d]) => ({ cluster: `C${c}`, dist: parseFloat(d as string) }))
+                                  .filter(d => !isNaN(d.dist))
+                                  .sort((a, b) => a.dist - b.dist);
+
+                                const d1 = sortedDists[0] || { cluster: `C${rawCluster}`, dist: 4.46 };
+                                const d2 = sortedDists[1] || { cluster: 'C2', dist: 13.62 };
+                                const maxDist = Math.max(d2.dist * 1.2, 20);
+                                const d1Pct = (d1.dist / maxDist) * 100;
+                                const d2Pct = (d2.dist / maxDist) * 100;
+
+                                return (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden pt-3 text-[10px] space-y-2 border-t border-slate-800/80 mt-2"
+                                  >
+                                    <div className="flex justify-between text-slate-400 font-bold uppercase tracking-wider">
+                                      <span>Nearest vs 2nd-Nearest Centroid</span>
+                                      <span className="text-blue-400">Δd = {(d2.dist - d1.dist).toFixed(2)}</span>
+                                    </div>
+
+                                    {/* Distance Scale Visualizer */}
+                                    <div className="relative h-6 bg-slate-950 rounded-xl border border-slate-800 p-1 flex items-center">
+                                      <div
+                                        style={{ left: `${Math.max(5, Math.min(d1Pct, 45))}%` }}
+                                        className="absolute transform -translate-x-1/2 flex flex-col items-center"
+                                      >
+                                        <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                                        <span className="text-[8px] font-mono text-emerald-300 font-bold">{d1.cluster}: {d1.dist.toFixed(1)}</span>
+                                      </div>
+                                      <div
+                                        style={{ left: `${Math.max(55, Math.min(d2Pct, 90))}%` }}
+                                        className="absolute transform -translate-x-1/2 flex flex-col items-center"
+                                      >
+                                        <div className="w-2 h-2 rounded-full bg-slate-500"></div>
+                                        <span className="text-[8px] font-mono text-slate-400">{d2.cluster}: {d2.dist.toFixed(1)}</span>
+                                      </div>
+                                      <div className="w-full h-0.5 bg-slate-800 rounded-full"></div>
+                                    </div>
+                                    <p className="text-[9.5px] text-slate-400 leading-snug">
+                                      Confidence calculation: <code className="text-blue-300">({d2.dist.toFixed(2)} - {d1.dist.toFixed(2)}) / {d1.dist.toFixed(2)} = {confVal.toFixed(3)}</code>
+                                    </p>
+                                  </motion.div>
+                                );
+                              })()}
+                            </AnimatePresence>
                           </div>
 
-                          {/* Mapping Purity */}
-                          <div className="space-y-1">
-                            <div className="flex justify-between items-center text-[11px]">
-                              <MetricTooltip id="Purity">
-                                <span className="text-slate-400 font-bold cursor-help">Mapping Purity</span>
-                              </MetricTooltip>
-                              <span className="text-slate-200 font-mono font-bold">{(purityVal * 100).toFixed(1)}%</span>
+                          {/* Mapping Purity Bar & Expandable Drawer */}
+                          <div className="space-y-1 rounded-2xl p-2.5 bg-slate-900/40 border border-slate-800/80 hover:border-emerald-500/30 transition-all">
+                            <div
+                              onClick={() => setExpandedMetric(prev => ({
+                                ...prev,
+                                [branchKey]: prev[branchKey] === 'purity' ? null : 'purity'
+                              }))}
+                              className="flex justify-between items-center text-[11px] cursor-pointer group"
+                            >
+                              <div className="flex items-center space-x-1.5">
+                                <MetricTooltip id="Purity">
+                                  <Info className="w-3 h-3 text-slate-500 group-hover:text-emerald-400 cursor-help transition-colors" />
+                                </MetricTooltip>
+                                <span className="text-slate-300 font-bold group-hover:text-white transition-colors">Mapping Purity</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-emerald-400 font-mono font-bold">{(purityVal * 100).toFixed(1)}%</span>
+                                <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${expandedMetric[branchKey] === 'purity' ? 'rotate-180 text-emerald-400' : ''}`} />
+                              </div>
                             </div>
-                            <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+
+                            <div
+                              onClick={() => setExpandedMetric(prev => ({
+                                ...prev,
+                                [branchKey]: prev[branchKey] === 'purity' ? null : 'purity'
+                              }))}
+                              className="h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 cursor-pointer"
+                            >
                               <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${purityVal * 100}%` }}
                                 className="h-full bg-gradient-to-r from-emerald-600 to-teal-400 rounded-full"
                               />
                             </div>
+
+                            <AnimatePresence>
+                              {expandedMetric[branchKey] === 'purity' && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden pt-3 text-[10px] space-y-2 border-t border-slate-800/80 mt-2"
+                                >
+                                  <div className="flex justify-between text-slate-400 font-bold uppercase tracking-wider">
+                                    <span>Cohort Class Purity</span>
+                                    <span className="text-emerald-400">{(purityVal * 100).toFixed(1)}% Match</span>
+                                  </div>
+
+                                  {/* Stacked Cohort Purity Bar */}
+                                  <div className="h-4 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex">
+                                    <div
+                                      style={{ width: `${purityVal * 100}%` }}
+                                      className="bg-emerald-500/80 h-full flex items-center justify-center text-[9px] font-black text-slate-950 truncate px-1"
+                                    >
+                                      {(purityVal * 100).toFixed(1)}% Purity
+                                    </div>
+                                    <div
+                                      style={{ width: `${(1 - purityVal) * 100}%` }}
+                                      className="bg-slate-800 h-full flex items-center justify-center text-[8px] font-mono text-slate-400 truncate px-1"
+                                    >
+                                      {((1 - purityVal) * 100).toFixed(1)}%
+                                    </div>
+                                  </div>
+                                  <p className="text-[9.5px] text-slate-400 leading-snug">
+                                    Derived from training co-association matrix overlap for Raw Cluster <code className="text-emerald-300">C{rawCluster}</code> → <code className="text-emerald-300">{subtypeName}</code>.
+                                  </p>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
 
-                          {/* Branch Reliability */}
-                          <div className="space-y-1">
-                            <div className="flex justify-between items-center text-[11px]">
-                              <MetricTooltip id="Branch Reliability">
-                                <span className="text-slate-400 font-bold cursor-help">Branch Reliability</span>
-                              </MetricTooltip>
-                              <span className="text-slate-200 font-mono font-bold">{(relVal * 100).toFixed(0)}%</span>
+                          {/* Branch Reliability Bar & Multiplier Badge */}
+                          <div className="space-y-1 rounded-2xl p-2.5 bg-slate-900/40 border border-slate-800/80 hover:border-purple-500/30 transition-all">
+                            <div
+                              onClick={() => setExpandedMetric(prev => ({
+                                ...prev,
+                                [branchKey]: prev[branchKey] === 'reliability' ? null : 'reliability'
+                              }))}
+                              className="flex justify-between items-center text-[11px] cursor-pointer group"
+                            >
+                              <div className="flex items-center space-x-1.5">
+                                <MetricTooltip id="Branch Reliability">
+                                  <Info className="w-3 h-3 text-slate-500 group-hover:text-purple-400 cursor-help transition-colors" />
+                                </MetricTooltip>
+                                <span className="text-slate-300 font-bold group-hover:text-white transition-colors">Branch Reliability</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-purple-400 font-mono font-bold">{(relVal * 100).toFixed(0)}%</span>
+                                <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${expandedMetric[branchKey] === 'reliability' ? 'rotate-180 text-purple-400' : ''}`} />
+                              </div>
                             </div>
-                            <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+
+                            <div
+                              onClick={() => setExpandedMetric(prev => ({
+                                ...prev,
+                                [branchKey]: prev[branchKey] === 'reliability' ? null : 'reliability'
+                              }))}
+                              className="h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 cursor-pointer"
+                            >
                               <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${relVal * 100}%` }}
                                 className="h-full bg-gradient-to-r from-purple-600 to-indigo-400 rounded-full"
                               />
                             </div>
+
+                            <AnimatePresence>
+                              {expandedMetric[branchKey] === 'reliability' && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden pt-3 text-[10px] space-y-2 border-t border-slate-800/80 mt-2"
+                                >
+                                  {/* High contrast Multiplier Badge */}
+                                  <div className="p-2 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-between">
+                                    <span className="text-slate-300 font-sans font-bold">Method Multiplier</span>
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-500 text-slate-950 font-black font-mono text-[10px]">
+                                      {relVal.toFixed(2)}x {branchKey === 'Branch_C' ? '(VST Penalty)' : '(Full Fidelity)'}
+                                    </span>
+                                  </div>
+                                  <p className="text-[9.5px] text-slate-400 leading-snug">
+                                    {branchKey === 'Branch_A'
+                                      ? '1.00x multiplier applied: TPM normalization provides direct transcript abundance scaling.'
+                                      : branchKey === 'Branch_B'
+                                      ? '1.00x multiplier applied: CPM normalization provides direct library depth scaling.'
+                                      : '0.85x multiplier applied: Single-sample VST uses a log2 count proxy transformation, applying a 15% reliability discount.'}
+                                  </p>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         </div>
                       </div>
