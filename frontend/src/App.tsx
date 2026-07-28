@@ -1378,34 +1378,87 @@ function App() {
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: 'auto', opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden pt-3 text-[10px] space-y-2 border-t border-slate-800/80 mt-2"
+                                    className="overflow-hidden p-4 rounded-2xl bg-slate-950/95 border border-blue-500/40 text-xs space-y-4 mt-3 shadow-2xl"
                                   >
-                                    <div className="flex justify-between text-slate-400 font-bold uppercase tracking-wider">
-                                      <span>Nearest vs 2nd-Nearest Centroid</span>
-                                      <span className="text-blue-400">Δd = {(d2.dist - d1.dist).toFixed(2)}</span>
+                                    <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                                      <span className="font-black uppercase tracking-wider text-blue-400 text-[11px] flex items-center space-x-1.5">
+                                        <Activity className="w-3.5 h-3.5 text-blue-400" />
+                                        <span>Centroid Proximity & Distance Map</span>
+                                      </span>
+                                      <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono font-bold text-[10px] border border-blue-500/40">
+                                        Δd = {(d2.dist - d1.dist).toFixed(2)} units
+                                      </span>
                                     </div>
 
-                                    {/* Distance Scale Visualizer */}
-                                    <div className="relative h-6 bg-slate-950 rounded-xl border border-slate-800 p-1 flex items-center">
-                                      <div
-                                        style={{ left: `${Math.max(5, Math.min(d1Pct, 45))}%` }}
-                                        className="absolute transform -translate-x-1/2 flex flex-col items-center"
-                                      >
-                                        <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
-                                        <span className="text-[8px] font-mono text-emerald-300 font-bold">{d1.cluster}: {d1.dist.toFixed(1)}</span>
+                                    {/* 2 Centroid Distance Cards Side-by-Side */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                      {/* Nearest Centroid Card */}
+                                      <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 space-y-1">
+                                        <span className="text-[9px] font-black uppercase text-emerald-400 tracking-wider block">Nearest Centroid</span>
+                                        <div className="text-sm font-black text-white font-mono flex items-center justify-between">
+                                          <span>{d1.cluster} ({subtypeName.split(' ')[0]} {subtypeName.split(' ')[1] || ''})</span>
+                                          <span className="text-emerald-300 text-xs font-bold">{d1.dist.toFixed(2)}</span>
+                                        </div>
+                                        <span className="text-[9px] text-emerald-400/80 block font-sans">Highest similarity match</span>
                                       </div>
-                                      <div
-                                        style={{ left: `${Math.max(55, Math.min(d2Pct, 90))}%` }}
-                                        className="absolute transform -translate-x-1/2 flex flex-col items-center"
-                                      >
-                                        <div className="w-2 h-2 rounded-full bg-slate-500"></div>
-                                        <span className="text-[8px] font-mono text-slate-400">{d2.cluster}: {d2.dist.toFixed(1)}</span>
+
+                                      {/* Second-Nearest Centroid Card */}
+                                      <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+                                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">2nd-Nearest Centroid</span>
+                                        <div className="text-sm font-black text-slate-300 font-mono flex items-center justify-between">
+                                          <span>{d2.cluster}</span>
+                                          <span className="text-slate-400 text-xs font-bold">{d2.dist.toFixed(2)}</span>
+                                        </div>
+                                        <span className="text-[9px] text-slate-500 block font-sans">Nearest competing cluster</span>
                                       </div>
-                                      <div className="w-full h-0.5 bg-slate-800 rounded-full"></div>
                                     </div>
-                                    <p className="text-[9.5px] text-slate-400 leading-snug">
-                                      Confidence calculation: <code className="text-blue-300">({d2.dist.toFixed(2)} - {d1.dist.toFixed(2)}) / {d1.dist.toFixed(2)} = {confVal.toFixed(3)}</code>
-                                    </p>
+
+                                    {/* Spacious Visual Track */}
+                                    <div className="space-y-1.5 pt-1">
+                                      <div className="flex justify-between text-[10px] text-slate-400 font-bold">
+                                        <span>Close Boundary ({d1.cluster})</span>
+                                        <span>Distant Boundary ({d2.cluster})</span>
+                                      </div>
+                                      <div className="relative h-8 bg-slate-900 rounded-xl border border-slate-700/80 p-1 flex items-center shadow-inner overflow-hidden">
+                                        {/* Connecting distance gradient */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-blue-500/10 to-slate-800/40" />
+                                        
+                                        {/* Marker 1 */}
+                                        <div
+                                          style={{ left: `${Math.max(12, Math.min(d1Pct, 40))}%` }}
+                                          className="absolute transform -translate-x-1/2 flex items-center space-x-1.5 z-10"
+                                        >
+                                          <div className="w-4 h-4 rounded-full bg-emerald-400 border-2 border-slate-950 shadow-[0_0_12px_rgba(52,211,153,0.9)] animate-pulse" />
+                                          <span className="text-[10px] font-mono text-emerald-300 font-black px-2 py-0.5 rounded-md bg-slate-950/95 border border-emerald-500/50 shadow-md">
+                                            {d1.cluster}: {d1.dist.toFixed(1)}
+                                          </span>
+                                        </div>
+
+                                        {/* Marker 2 */}
+                                        <div
+                                          style={{ left: `${Math.max(60, Math.min(d2Pct, 88))}%` }}
+                                          className="absolute transform -translate-x-1/2 flex items-center space-x-1.5 z-10"
+                                        >
+                                          <div className="w-3.5 h-3.5 rounded-full bg-slate-500 border-2 border-slate-950" />
+                                          <span className="text-[10px] font-mono text-slate-300 font-bold px-2 py-0.5 rounded-md bg-slate-950/95 border border-slate-700">
+                                            {d2.cluster}: {d2.dist.toFixed(1)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Explanatory Calculation Card */}
+                                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
+                                      <div className="font-bold text-white flex items-center justify-between">
+                                        <span>Proximity Ratio Calculation</span>
+                                        <code className="text-blue-300 font-mono font-black text-xs">
+                                          ({d2.dist.toFixed(2)} - {d1.dist.toFixed(2)}) / {d1.dist.toFixed(2)} = {confVal.toFixed(3)}
+                                        </code>
+                                      </div>
+                                      <p className="text-[10.5px] text-slate-400 leading-relaxed font-sans">
+                                        <strong className="text-slate-200">What this means:</strong> The sample's expression profile is <strong className="text-blue-300 font-mono">{(d2.dist / Math.max(d1.dist, 0.01)).toFixed(1)}× closer</strong> to {d1.cluster} than {d2.cluster}. Higher separation scores confirm that the sample sits deep within the cluster centroid rather than near a boundary.
+                                      </p>
+                                    </div>
                                   </motion.div>
                                 );
                               })()}
@@ -1453,31 +1506,56 @@ function App() {
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: 'auto', opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden pt-3 text-[10px] space-y-2 border-t border-slate-800/80 mt-2"
+                                  className="overflow-hidden p-4 rounded-2xl bg-slate-950/95 border border-emerald-500/40 text-xs space-y-4 mt-3 shadow-2xl"
                                 >
-                                  <div className="flex justify-between text-slate-400 font-bold uppercase tracking-wider">
-                                    <span>Cohort Class Purity</span>
-                                    <span className="text-emerald-400">{(purityVal * 100).toFixed(1)}% Match</span>
+                                  <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                                    <span className="font-black uppercase tracking-wider text-emerald-400 text-[11px] flex items-center space-x-1.5">
+                                      <Workflow className="w-3.5 h-3.5 text-emerald-400" />
+                                      <span>Training Cohort Purity</span>
+                                    </span>
+                                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-black text-[10px] border border-emerald-500/40">
+                                      {(purityVal * 100).toFixed(1)}% Consensus Match
+                                    </span>
                                   </div>
 
-                                  {/* Stacked Cohort Purity Bar */}
-                                  <div className="h-4 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex">
-                                    <div
-                                      style={{ width: `${purityVal * 100}%` }}
-                                      className="bg-emerald-500/80 h-full flex items-center justify-center text-[9px] font-black text-slate-950 truncate px-1"
-                                    >
-                                      {(purityVal * 100).toFixed(1)}% Purity
+                                  {/* Large High-Contrast Stacked Gauge Bar */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                      <span className="text-emerald-400">Primary Subtype Concordance ({(purityVal * 100).toFixed(1)}%)</span>
+                                      <span className="text-slate-500">Cohort Overlap ({((1 - purityVal) * 100).toFixed(1)}%)</span>
                                     </div>
-                                    <div
-                                      style={{ width: `${(1 - purityVal) * 100}%` }}
-                                      className="bg-slate-800 h-full flex items-center justify-center text-[8px] font-mono text-slate-400 truncate px-1"
-                                    >
-                                      {((1 - purityVal) * 100).toFixed(1)}%
+
+                                    <div className="h-9 bg-slate-900 rounded-xl overflow-hidden border border-slate-700/80 flex shadow-inner p-1">
+                                      <div
+                                        style={{ width: `${purityVal * 100}%` }}
+                                        className="bg-gradient-to-r from-emerald-600 to-teal-400 h-full rounded-lg flex items-center justify-center font-black font-mono text-slate-950 text-xs shadow-md transition-all px-2"
+                                      >
+                                        {(purityVal * 100).toFixed(1)}% {subtypeName.split(' ')[1] || subtypeName} Pure
+                                      </div>
+                                      <div
+                                        style={{ width: `${(1 - purityVal) * 100}%` }}
+                                        className="bg-slate-800 h-full rounded-lg flex items-center justify-center font-mono font-bold text-slate-400 text-[10px] px-1 ml-1"
+                                      >
+                                        {((1 - purityVal) * 100).toFixed(1)}%
+                                      </div>
                                     </div>
                                   </div>
-                                  <p className="text-[9.5px] text-slate-400 leading-snug">
-                                    Derived from training co-association matrix overlap for Raw Cluster <code className="text-emerald-300">C{rawCluster}</code> → <code className="text-emerald-300">{subtypeName}</code>.
-                                  </p>
+
+                                  {/* Explanatory Cards */}
+                                  <div className="grid grid-cols-2 gap-3 pt-1">
+                                    <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[10.5px] space-y-1">
+                                      <span className="font-bold text-emerald-300 block">Class Concordance</span>
+                                      <p className="text-slate-400 leading-snug font-sans">
+                                        <strong className="text-emerald-200 font-mono">{(purityVal * 100).toFixed(1)}%</strong> of training cohort samples assigned to Raw Cluster <code className="text-emerald-300 font-mono">C{rawCluster}</code> map consistently to <strong className="text-emerald-300">{subtypeName}</strong>.
+                                      </p>
+                                    </div>
+                                    <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-[10.5px] space-y-1">
+                                      <span className="font-bold text-slate-300 block">Biological Ambiguity</span>
+                                      <p className="text-slate-400 leading-snug font-sans">
+                                        <strong className="text-slate-300 font-mono">{((1 - purityVal) * 100).toFixed(1)}%</strong> of historical training samples showed secondary cluster co-association overlap.
+                                      </p>
+                                    </div>
+                                  </div>
                                 </motion.div>
                               )}
                             </AnimatePresence>
@@ -1524,22 +1602,41 @@ function App() {
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: 'auto', opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden pt-3 text-[10px] space-y-2 border-t border-slate-800/80 mt-2"
+                                  className="overflow-hidden p-4 rounded-2xl bg-slate-950/95 border border-purple-500/40 text-xs space-y-4 mt-3 shadow-2xl"
                                 >
-                                  {/* High contrast Multiplier Badge */}
-                                  <div className="p-2 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-between">
-                                    <span className="text-slate-300 font-sans font-bold">Method Multiplier</span>
-                                    <span className="px-2 py-0.5 rounded-md bg-purple-500 text-slate-950 font-black font-mono text-[10px]">
-                                      {relVal.toFixed(2)}x {branchKey === 'Branch_C' ? '(VST Penalty)' : '(Full Fidelity)'}
+                                  <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                                    <span className="font-black uppercase tracking-wider text-purple-400 text-[11px] flex items-center space-x-1.5">
+                                      <Scale className="w-3.5 h-3.5 text-purple-400" />
+                                      <span>Normalization Fidelity Factor</span>
+                                    </span>
+                                    <span className="px-2.5 py-0.5 rounded-md bg-purple-500 text-slate-950 font-black font-mono text-[10px]">
+                                      {relVal.toFixed(2)}x Weight Multiplier
                                     </span>
                                   </div>
-                                  <p className="text-[9.5px] text-slate-400 leading-snug">
-                                    {branchKey === 'Branch_A'
-                                      ? '1.00x multiplier applied: TPM normalization provides direct transcript abundance scaling.'
-                                      : branchKey === 'Branch_B'
-                                      ? '1.00x multiplier applied: CPM normalization provides direct library depth scaling.'
-                                      : '0.85x multiplier applied: Single-sample VST uses a log2 count proxy transformation, applying a 15% reliability discount.'}
-                                  </p>
+
+                                  {/* Large High Contrast Badge */}
+                                  <div className="p-4 rounded-xl bg-purple-950/50 border border-purple-500/40 flex items-center justify-between">
+                                    <div>
+                                      <span className="text-[10px] text-purple-300 font-black uppercase tracking-wider block">Pipeline Method</span>
+                                      <span className="text-sm font-black text-white font-mono block">{normMethod}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-2xl font-black font-mono text-purple-300 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">
+                                        {relVal.toFixed(2)}x
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
+                                    <div className="font-bold text-white">Methodology & Transformation Weighting</div>
+                                    <p className="text-[10.5px] text-slate-400 leading-relaxed font-sans">
+                                      {branchKey === 'Branch_A'
+                                        ? 'Branch A uses direct Transcripts Per Million (TPM) normalization. Because TPM scales directly for gene length and library size without loss of variance, it receives a 1.00x full fidelity vote weight multiplier.'
+                                        : branchKey === 'Branch_B'
+                                        ? 'Branch B uses Counts Per Million (CPM) normalization on raw unstranded gene counts. It accurately preserves relative expression magnitude across library depths, earning a 1.00x full fidelity vote weight multiplier.'
+                                        : 'Branch C computes a Variance Stabilizing Transformation (VST) proxy via log2-count scaling. Because single-sample VST is an approximation proxy without multi-sample dispersion modeling, a 15% reliability penalty (0.85x multiplier) is applied during vote assembly.'}
+                                    </p>
+                                  </div>
                                 </motion.div>
                               )}
                             </AnimatePresence>
