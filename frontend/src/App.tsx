@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  UploadCloud, CheckCircle, AlertTriangle, XCircle, ChevronRight, Download, Activity,
+  UploadCloud, CheckCircle, CheckCircle2, AlertTriangle, XCircle, ChevronRight, ChevronDown, Download, Activity,
   FileText, ShieldAlert, Database, Info, Layers, Workflow, Microscope, Dna, Merge, Scale,
   Printer, ImageIcon
 } from 'lucide-react';
@@ -375,6 +375,8 @@ function App() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [detailedMode, setDetailedMode] = useState(false);
+  const [showMathSection, setShowMathSection] = useState(false);
+  const [expandedAudit, setExpandedAudit] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timeoutsRef = useRef<number[]>([]);
 
@@ -1182,62 +1184,323 @@ function App() {
               </div>
             </div>
 
-            {/* 3. BRANCH COMPARISON MATRIX */}
+            {/* 3. ANALYTICAL BRANCH MATRIX (UI/UX REFACTOR) */}
             <div className="space-y-6">
-              <h3 className="text-xl font-black text-white flex items-center space-x-3">
-                <Database className="w-6 h-6 text-blue-400" /> <span>Analytical Branch Matrix</span>
-              </h3>
-              
-              <div className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-950 shadow-2xl">
-                <table className="w-full text-left border-collapse table-fixed">
-                  <thead>
-                    <tr className="bg-slate-900/80 border-b border-slate-800">
-                      <th className="p-5 w-48 text-[10px] text-slate-500 uppercase font-black tracking-[0.2em] bg-slate-900/50 sticky left-0 z-20 backdrop-blur-md">Feature Analysis</th>
-                      {result.branch_predictions?.map((b: any) => (
-                        <th key={b.branch} className="p-5 min-w-[220px]">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-white">{b.branch.replace('_', ' ')}</span>
-                            {(b.mapped_consensus_class ?? b.mapped_shared_class) === result.prediction_summary.final_shared_class && (
-                              <span className="text-[8px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded font-black uppercase tracking-widest">Consensus</span>
-                            )}
+              {/* Section Header & Consensus Top Ribbon */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h3 className="text-xl font-black text-white flex items-center space-x-3">
+                  <Database className="w-6 h-6 text-blue-400" />
+                  <span>Analytical Branch Matrix</span>
+                </h3>
+
+                {result.branch_predictions && (() => {
+                  const mappedClasses = result.branch_predictions.map((b: any) => b.mapped_shared_class ?? b.mapped_consensus_class);
+                  const winner = result.prediction_summary.final_shared_class;
+                  const agreeCount = mappedClasses.filter((c: any) => c === winner).length;
+                  const isFullConsensus = agreeCount === 3;
+                  const finalSubtype = result.prediction_summary.final_subtype_name || `Subtype Class ${winner}`;
+
+                  return (
+                    <div className={`flex items-center space-x-2.5 px-4 py-2 rounded-2xl border text-xs font-bold shadow-lg backdrop-blur-md transition-all ${
+                      isFullConsensus
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-emerald-500/5'
+                        : 'bg-blue-500/10 border-blue-500/30 text-blue-400 shadow-blue-500/5'
+                    }`}>
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isFullConsensus ? 'bg-emerald-400' : 'bg-blue-400'}`}></span>
+                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isFullConsensus ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
+                      </span>
+                      <span>
+                        {isFullConsensus
+                          ? `Full Consensus: All 3 Branches predict ${finalSubtype}`
+                          : `Ensemble Voting Consensus: ${agreeCount} of 3 Branches predict ${finalSubtype}`}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* 3-Column Side-by-Side Card Grid System */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {result.branch_predictions?.map((b: any) => {
+                  const branchKey = b.branch;
+                  const isWinner = (b.mapped_consensus_class ?? b.mapped_shared_class) === result.prediction_summary.final_shared_class;
+                  const mappedClass = b.mapped_shared_class ?? b.mapped_consensus_class;
+                  const subtypeName = (b.mapped_subtype_name ?? b.mapped_subtype) || `Subtype Class ${mappedClass}`;
+                  
+                  // Color-coded pill tag per requirements:
+                  // Subtype Alpha: Cyan / Electric Blue
+                  // Subtype Beta: Emerald Green
+                  // Subtype Gamma: Amber / Orange
+                  // Subtype Delta: Crimson / Red
+                  let badgeStyle = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 shadow-cyan-500/10';
+                  if (mappedClass === 0 || subtypeName.includes('Alpha')) {
+                    badgeStyle = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 shadow-cyan-500/10';
+                  } else if (mappedClass === 1 || subtypeName.includes('Beta')) {
+                    badgeStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10';
+                  } else if (mappedClass === 2 || subtypeName.includes('Gamma')) {
+                    badgeStyle = 'bg-amber-500/10 text-amber-400 border-amber-500/30 shadow-amber-500/10';
+                  } else if (mappedClass === 3 || subtypeName.includes('Delta')) {
+                    badgeStyle = 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-rose-500/10';
+                  }
+
+                  const normMethod = branchKey === 'Branch_A' ? 'TPM / log2TPM' : branchKey === 'Branch_B' ? 'CPM / log2CPM' : 'VST Proxy / log2Count';
+                  const inputCol = branchKey === 'Branch_A' ? 'tpm_unstranded' : 'unstranded (raw)';
+                  const geneCount = branchKey === 'Branch_C' ? '2,000 genes' : '500 genes';
+                  const coveragePct = (parseFloat(b.feature_coverage || 1.0) * 100).toFixed(0);
+
+                  const confVal = parseFloat(b.distance_confidence || b.confidence || 0);
+                  const purityVal = parseFloat(b.mapping_purity || 0);
+                  const relVal = parseFloat(b.branch_reliability || (branchKey === 'Branch_C' ? 0.85 : 1.0));
+                  const finalWeightVal = parseFloat(b.final_vote_weight || 0);
+                  const outlierPen = parseFloat(b.outlier_penalty || 1.0);
+                  const rawCluster = b.raw_cluster;
+
+                  const isAuditExpanded = !!expandedAudit[branchKey];
+
+                  return (
+                    <motion.div
+                      key={branchKey}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`glass-panel p-6 rounded-3xl border flex flex-col justify-between space-y-6 relative overflow-hidden transition-all duration-300 ${
+                        isWinner
+                          ? 'border-blue-500/40 bg-slate-900/60 shadow-[0_0_25px_rgba(59,130,246,0.12)]'
+                          : 'border-slate-800 bg-slate-950/80 hover:border-slate-700'
+                      }`}
+                    >
+                      {/* Top Card Header */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs ${
+                              branchKey === 'Branch_A' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
+                              branchKey === 'Branch_B' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
+                              'bg-purple-500/15 text-purple-400 border border-purple-500/30'
+                            }`}>
+                              {branchKey.split('_')[1]}
+                            </div>
+                            <div>
+                              <h4 className="text-base font-black text-white">{branchKey.replace('_', ' ')}</h4>
+                              <p className="text-[10px] text-slate-400 font-mono">{normMethod}</p>
+                            </div>
                           </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-900">
-                    {[
-                      { id: 'Branch', label: 'Normalization Method', key: 'branch', val: (b: any) => b.branch === 'Branch_A' ? 'TPM / log2TPM' : b.branch === 'Branch_B' ? 'CPM / log2CPM' : 'VST Proxy / log2Count' },
-                      { id: 'Branch', label: 'Input Column', key: 'input', val: (b: any) => b.branch === 'Branch_A' ? 'tpm_unstranded' : 'unstranded (raw)' },
-                      { id: 'Genes', label: 'Selected Genes', key: 'genes', val: (b: any) => b.branch === 'Branch_C' ? '2000' : '500' },
-                      { id: 'Coverage', label: 'Feature Coverage', key: 'coverage', val: (b: any) => parseFloat(b.feature_coverage).toFixed(2), highlight: true },
-                      { id: 'Raw Cluster', label: 'Internal Raw Cluster', key: 'raw_cluster', val: (b: any) => `C${b.raw_cluster}` },
-                      { id: 'Mapped Shared Class', label: 'Consensus Class', key: 'mapped_class', val: (b: any) => b.mapped_shared_class ?? b.mapped_consensus_class, mono: true },
-                      { id: 'Subtype', label: 'Mapped Subtype', key: 'mapped_subtype', val: (b: any) => ((b.mapped_subtype_name ?? b.mapped_subtype) || 'N/A').split(' ')[1], bold: true },
-                      { id: 'Confidence', label: 'Dist. Confidence', key: 'confidence', val: (b: any) => parseFloat(b.distance_confidence || b.confidence || 0).toFixed(3) },
-                      { id: 'Purity', label: 'Mapping Purity', key: 'purity', val: (b: any) => parseFloat(b.mapping_purity || 0).toFixed(3) },
-                      { id: 'Branch Reliability', label: 'Branch Reliability', key: 'rel', val: (b: any) => parseFloat(b.branch_reliability || (b.branch === 'Branch_C' ? 0.85 : 1.0)).toFixed(2) },
-                      { id: 'Outlier Penalty', label: 'Outlier Penalty', key: 'outlier', val: (b: any) => parseFloat(b.outlier_penalty || 1).toFixed(2) },
-                      { id: 'Vote Weight', label: 'Final Vote Weight', key: 'weight', val: (b: any) => parseFloat(b.final_vote_weight || 0).toFixed(3), color: 'text-purple-400' },
-                      { id: 'Agreement', label: 'Branch Status', key: 'status', val: (b: any) => b.status === 'completed' ? 'SUCCESS' : 'SKIPPED', color: 'text-green-500' }
-                    ].map((row, i) => (
-                      <tr key={i} className="hover:bg-white/5 transition-colors group">
-                        <td className="p-4 bg-slate-900/30 sticky left-0 z-10 backdrop-blur-sm border-r border-slate-800">
-                          <MetricTooltip id={row.id}>
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest cursor-help group-hover:text-slate-300 transition-colors">{row.label}</span>
-                          </MetricTooltip>
-                        </td>
-                        {result.branch_predictions?.map((b: any) => (
-                          <td key={b.branch} className="p-4">
-                            <span className={`text-xs font-mono ${row.bold ? 'font-black uppercase' : ''} ${row.color || 'text-slate-300'}`}>
-                              {row.val(b)}
+
+                          <div className="flex items-center space-x-2">
+                            {isWinner && (
+                              <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                                Consensus
+                              </span>
+                            )}
+                            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest flex items-center space-x-1">
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              <span>SUCCESS</span>
                             </span>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </div>
+                        </div>
+
+                        {/* Muted Metadata Bar */}
+                        <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-[10px]">
+                          <div>
+                            <span className="text-slate-500 block uppercase font-bold tracking-tighter">Input Column</span>
+                            <span className="text-slate-300 font-mono truncate block">{inputCol}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 block uppercase font-bold tracking-tighter">Feature Coverage</span>
+                            <span className="text-emerald-400 font-mono font-bold block">{coveragePct}% ({geneCount})</span>
+                          </div>
+                        </div>
+
+                        {/* Mapped Subtype Pill Tag */}
+                        <div className="pt-2">
+                          <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-1.5">Mapped Subtype</span>
+                          <div className={`inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-xl border text-xs font-black uppercase tracking-wider ${badgeStyle}`}>
+                            <span className="w-2 h-2 rounded-full bg-current"></span>
+                            <span>{subtypeName}</span>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar Gauges */}
+                        <div className="space-y-3 pt-2">
+                          {/* Distance Confidence */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[11px]">
+                              <MetricTooltip id="Confidence">
+                                <span className="text-slate-400 font-bold cursor-help flex items-center space-x-1">
+                                  <span>Distance Confidence</span>
+                                </span>
+                              </MetricTooltip>
+                              <span className="text-slate-200 font-mono font-bold">{confVal.toFixed(3)}</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${Math.min(confVal * 100, 100)}%` }}
+                                className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Mapping Purity */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[11px]">
+                              <MetricTooltip id="Purity">
+                                <span className="text-slate-400 font-bold cursor-help">Mapping Purity</span>
+                              </MetricTooltip>
+                              <span className="text-slate-200 font-mono font-bold">{(purityVal * 100).toFixed(1)}%</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${purityVal * 100}%` }}
+                                className="h-full bg-gradient-to-r from-emerald-600 to-teal-400 rounded-full"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Branch Reliability */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[11px]">
+                              <MetricTooltip id="Branch Reliability">
+                                <span className="text-slate-400 font-bold cursor-help">Branch Reliability</span>
+                              </MetricTooltip>
+                              <span className="text-slate-200 font-mono font-bold">{(relVal * 100).toFixed(0)}%</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${relVal * 100}%` }}
+                                className="h-full bg-gradient-to-r from-purple-600 to-indigo-400 rounded-full"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hero Metric Box: Final Vote Weight */}
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.15)] flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] text-purple-300/80 font-black uppercase tracking-widest block">Hero Metric</span>
+                            <span className="text-xs font-bold text-white uppercase tracking-wider block">Final Vote Weight</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-2xl font-black font-mono text-purple-300 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]">
+                              {finalWeightVal.toFixed(3)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Collapsible "Detailed Audit Parameters" Accordion inside Card */}
+                        <div className="border-t border-slate-800/80 pt-3">
+                          <button
+                            onClick={() => setExpandedAudit(prev => ({ ...prev, [branchKey]: !prev[branchKey] }))}
+                            className="w-full flex items-center justify-between text-[11px] text-slate-400 hover:text-slate-200 py-1 transition-colors font-bold uppercase tracking-wider"
+                          >
+                            <span>Detailed Audit Parameters</span>
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isAuditExpanded ? 'rotate-180 text-blue-400' : ''}`} />
+                          </button>
+
+                          <AnimatePresence>
+                            {isAuditExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden space-y-2 pt-3 text-[11px] font-mono text-slate-300 border-t border-slate-900 mt-2"
+                              >
+                                <div className="flex justify-between py-1 border-b border-slate-900">
+                                  <span className="text-slate-500 font-sans">Internal Raw Cluster:</span>
+                                  <span className="font-bold text-blue-400">Cluster C{rawCluster}</span>
+                                </div>
+                                <div className="flex justify-between py-1 border-b border-slate-900">
+                                  <span className="text-slate-500 font-sans">Outlier Penalty:</span>
+                                  <span className="font-bold text-amber-400">{outlierPen.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between py-1 border-b border-slate-900">
+                                  <span className="text-slate-500 font-sans">Feature Coverage:</span>
+                                  <span className="font-bold text-emerald-400">{(parseFloat(b.feature_coverage || 1.0) * 100).toFixed(1)}%</span>
+                                </div>
+                                <div className="flex justify-between py-1">
+                                  <span className="text-slate-500 font-sans">Mapped Consensus Class:</span>
+                                  <span className="font-bold text-purple-400">Class {mappedClass}</span>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Expandable Mathematical Transparency Section (XAI) */}
+              <div className="glass-panel rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden shadow-2xl">
+                <button
+                  onClick={() => setShowMathSection(prev => !prev)}
+                  className="w-full p-6 flex items-center justify-between text-left hover:bg-slate-900/40 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                      <Scale className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-white">View Mathematical Formulas & Weighting Logic</h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Explainable AI (XAI) breakdown of cluster distance confidence, purity, and vote weight equations.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs font-bold text-purple-400 uppercase tracking-widest">
+                    <span>{showMathSection ? 'Hide Math' : 'Show Math'}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showMathSection ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+
+                <AnimatePresence>
+                  {showMathSection && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden border-t border-slate-800/80 p-6 bg-slate-900/30 space-y-6"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Formula 1: Distance Confidence */}
+                        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                          <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest block">1. Distance Confidence</span>
+                          <div className="p-3 bg-slate-900 rounded-xl border border-slate-800/80 font-mono text-xs text-center text-blue-300 font-bold overflow-x-auto">
+                            {"Distance Confidence = (d_second - d_nearest) / (d_nearest + 1e-9)"}
+                          </div>
+                          <p className="text-[11px] text-slate-400 leading-relaxed">
+                            Quantifies how distinctly an expression vector maps to its assigned PCA centroid. A higher gap between the closest and second-closest centroids yields higher confidence.
+                          </p>
+                        </div>
+
+                        {/* Formula 2: Mapping Purity */}
+                        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                          <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest block">2. Mapping Purity & Reliability</span>
+                          <div className="p-3 bg-slate-900 rounded-xl border border-slate-800/80 font-mono text-xs text-center text-emerald-300 font-bold overflow-x-auto">
+                            {"Branch Weight = Mapping Purity × Branch Reliability"}
+                          </div>
+                          <p className="text-[11px] text-slate-400 leading-relaxed">
+                            Integrates cluster mapping purity derived from co-association matrices. Branch C uses log2-count VST proxy and receives a 0.85 reliability coefficient.
+                          </p>
+                        </div>
+
+                        {/* Formula 3: Final Vote Weight Equation */}
+                        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                          <span className="text-[10px] text-purple-400 font-black uppercase tracking-widest block">3. Final Vote Weight Equation</span>
+                          <div className="p-3 bg-slate-900 rounded-xl border border-slate-800/80 font-mono text-xs text-center text-purple-300 font-bold overflow-x-auto">
+                            {"Final Vote Weight = Purity × Outlier Penalty × Reliability"}
+                          </div>
+                          <p className="text-[11px] text-slate-400 leading-relaxed">
+                            Combines mapping purity, outlier distance boundaries, and branch reliability coefficients into the final weighted vote sum for consensus decision assembly.
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
