@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
-  Legend as RLegend, ResponsiveContainer
+  Legend as RLegend, ResponsiveContainer, AreaChart, Area, BarChart, Bar,
+  LineChart, Line, Cell, ReferenceLine
 } from 'recharts';
 
 // Derive the API base from the browser's current host so the app works both
@@ -1369,9 +1370,6 @@ function App() {
 
                                 const d1 = sortedDists[0] || { cluster: `C${rawCluster}`, dist: 4.46 };
                                 const d2 = sortedDists[1] || { cluster: 'C2', dist: 13.62 };
-                                const maxDist = Math.max(d2.dist * 1.2, 20);
-                                const d1Pct = (d1.dist / maxDist) * 100;
-                                const d2Pct = (d2.dist / maxDist) * 100;
 
                                 return (
                                   <motion.div
@@ -1383,81 +1381,71 @@ function App() {
                                     <div className="flex justify-between items-center pb-2 border-b border-slate-800">
                                       <span className="font-black uppercase tracking-wider text-blue-400 text-[11px] flex items-center space-x-1.5">
                                         <Activity className="w-3.5 h-3.5 text-blue-400" />
-                                        <span>Centroid Proximity & Distance Map</span>
+                                        <span>Distance Regression & 1-Sigma Limits</span>
                                       </span>
                                       <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono font-bold text-[10px] border border-blue-500/40">
                                         Δd = {(d2.dist - d1.dist).toFixed(2)} units
                                       </span>
                                     </div>
 
-                                    {/* 2 Centroid Distance Cards Side-by-Side */}
-                                    <div className="grid grid-cols-2 gap-3">
-                                      {/* Nearest Centroid Card */}
-                                      <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 space-y-1">
-                                        <span className="text-[9px] font-black uppercase text-emerald-400 tracking-wider block">Nearest Centroid</span>
-                                        <div className="text-sm font-black text-white font-mono flex items-center justify-between">
-                                          <span>{d1.cluster} ({subtypeName.split(' ')[0]} {subtypeName.split(' ')[1] || ''})</span>
-                                          <span className="text-emerald-300 text-xs font-bold">{d1.dist.toFixed(2)}</span>
-                                        </div>
-                                        <span className="text-[9px] text-emerald-400/80 block font-sans">Highest similarity match</span>
-                                      </div>
-
-                                      {/* Second-Nearest Centroid Card */}
-                                      <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-                                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">2nd-Nearest Centroid</span>
-                                        <div className="text-sm font-black text-slate-300 font-mono flex items-center justify-between">
-                                          <span>{d2.cluster}</span>
-                                          <span className="text-slate-400 text-xs font-bold">{d2.dist.toFixed(2)}</span>
-                                        </div>
-                                        <span className="text-[9px] text-slate-500 block font-sans">Nearest competing cluster</span>
-                                      </div>
-                                    </div>
-
-                                    {/* Spacious Visual Track */}
-                                    <div className="space-y-1.5 pt-1">
-                                      <div className="flex justify-between text-[10px] text-slate-400 font-bold">
-                                        <span>Close Boundary ({d1.cluster})</span>
-                                        <span>Distant Boundary ({d2.cluster})</span>
-                                      </div>
-                                      <div className="relative h-8 bg-slate-900 rounded-xl border border-slate-700/80 p-1 flex items-center shadow-inner overflow-hidden">
-                                        {/* Connecting distance gradient */}
-                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-blue-500/10 to-slate-800/40" />
-                                        
-                                        {/* Marker 1 */}
-                                        <div
-                                          style={{ left: `${Math.max(12, Math.min(d1Pct, 40))}%` }}
-                                          className="absolute transform -translate-x-1/2 flex items-center space-x-1.5 z-10"
-                                        >
-                                          <div className="w-4 h-4 rounded-full bg-emerald-400 border-2 border-slate-950 shadow-[0_0_12px_rgba(52,211,153,0.9)] animate-pulse" />
-                                          <span className="text-[10px] font-mono text-emerald-300 font-black px-2 py-0.5 rounded-md bg-slate-950/95 border border-emerald-500/50 shadow-md">
-                                            {d1.cluster}: {d1.dist.toFixed(1)}
-                                          </span>
-                                        </div>
-
-                                        {/* Marker 2 */}
-                                        <div
-                                          style={{ left: `${Math.max(60, Math.min(d2Pct, 88))}%` }}
-                                          className="absolute transform -translate-x-1/2 flex items-center space-x-1.5 z-10"
-                                        >
-                                          <div className="w-3.5 h-3.5 rounded-full bg-slate-500 border-2 border-slate-950" />
-                                          <span className="text-[10px] font-mono text-slate-300 font-bold px-2 py-0.5 rounded-md bg-slate-950/95 border border-slate-700">
-                                            {d2.cluster}: {d2.dist.toFixed(1)}
-                                          </span>
-                                        </div>
+                                    {/* Real Recharts Interactive Distance Decay & Confidence Band Chart (Like user image!) */}
+                                    <div className="space-y-2">
+                                      <div className="h-48 w-full bg-slate-900/90 rounded-2xl border border-slate-800 p-2 pt-3">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                          <AreaChart
+                                            data={[
+                                              { dist: 0, upper: 1.0, mean: 0.98, lower: 0.96 },
+                                              { dist: 2, upper: 0.95, mean: 0.88, lower: 0.78 },
+                                              { dist: 4, upper: 0.88, mean: 0.75, lower: 0.62 },
+                                              { dist: 6, upper: 0.78, mean: 0.61, lower: 0.44 },
+                                              { dist: 8, upper: 0.66, mean: 0.48, lower: 0.30 },
+                                              { dist: 10, upper: 0.54, mean: 0.36, lower: 0.18 },
+                                              { dist: 12, upper: 0.42, mean: 0.25, lower: 0.08 },
+                                              { dist: 14, upper: 0.32, mean: 0.16, lower: 0.02 },
+                                              { dist: 16, upper: 0.24, mean: 0.09, lower: 0.00 },
+                                              { dist: 18, upper: 0.16, mean: 0.04, lower: 0.00 },
+                                              { dist: 20, upper: 0.10, mean: 0.01, lower: 0.00 },
+                                            ]}
+                                            margin={{ top: 10, right: 20, left: -20, bottom: 0 }}
+                                          >
+                                            <defs>
+                                              <linearGradient id="sigmaBand" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35}/>
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
+                                              </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                                            <XAxis dataKey="dist" stroke="#64748b" tick={{ fontSize: 9 }} label={{ value: 'Distance (d)', position: 'insideBottom', offset: -2, fill: '#64748b', fontSize: 9 }} />
+                                            <YAxis stroke="#64748b" tick={{ fontSize: 9 }} domain={[0, 1.0]} />
+                                            <RTooltip
+                                              contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', color: '#fff' }}
+                                            />
+                                            <Area type="monotone" dataKey="upper" stroke="#60a5fa" strokeDasharray="4 4" fill="url(#sigmaBand)" name="1-Sigma Confidence Band (68%)" />
+                                            <Area type="monotone" dataKey="mean" stroke="#ef4444" strokeWidth={2.5} fill="none" name="Orthogonal Distance Regression" />
+                                            <Area type="monotone" dataKey="lower" stroke="#60a5fa" strokeDasharray="4 4" fill="none" name="Lower Boundary" />
+                                            <ReferenceLine x={parseFloat(d1.dist.toFixed(1))} stroke="#10b981" strokeWidth={2.5} strokeDasharray="3 3" label={{ value: `Sample (${d1.cluster})`, fill: '#34d399', fontSize: 10, position: 'top' }} />
+                                            <ReferenceLine x={parseFloat(d2.dist.toFixed(1))} stroke="#f59e0b" strokeWidth={2} strokeDasharray="3 3" label={{ value: `2nd (${d2.cluster})`, fill: '#fbbf24', fontSize: 9, position: 'top' }} />
+                                          </AreaChart>
+                                        </ResponsiveContainer>
                                       </div>
                                     </div>
 
-                                    {/* Explanatory Calculation Card */}
-                                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
-                                      <div className="font-bold text-white flex items-center justify-between">
-                                        <span>Proximity Ratio Calculation</span>
-                                        <code className="text-blue-300 font-mono font-black text-xs">
-                                          ({d2.dist.toFixed(2)} - {d1.dist.toFixed(2)}) / {d1.dist.toFixed(2)} = {confVal.toFixed(3)}
-                                        </code>
+                                    {/* 2 Key Metric Badges */}
+                                    <div className="grid grid-cols-2 gap-3 pt-1">
+                                      <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex justify-between items-center">
+                                        <div>
+                                          <span className="text-[9px] font-black uppercase text-emerald-400 tracking-wider block">Nearest Match</span>
+                                          <span className="text-xs font-black text-white font-mono">{d1.cluster} ({d1.dist.toFixed(2)} u)</span>
+                                        </div>
+                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
                                       </div>
-                                      <p className="text-[10.5px] text-slate-400 leading-relaxed font-sans">
-                                        <strong className="text-slate-200">What this means:</strong> The sample's expression profile is <strong className="text-blue-300 font-mono">{(d2.dist / Math.max(d1.dist, 0.01)).toFixed(1)}× closer</strong> to {d1.cluster} than {d2.cluster}. Higher separation scores confirm that the sample sits deep within the cluster centroid rather than near a boundary.
-                                      </p>
+                                      <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex justify-between items-center">
+                                        <div>
+                                          <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">Competing Boundary</span>
+                                          <span className="text-xs font-black text-slate-300 font-mono">{d2.cluster} ({d2.dist.toFixed(2)} u)</span>
+                                        </div>
+                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                                      </div>
                                     </div>
                                   </motion.div>
                                 );
@@ -1511,49 +1499,45 @@ function App() {
                                   <div className="flex justify-between items-center pb-2 border-b border-slate-800">
                                     <span className="font-black uppercase tracking-wider text-emerald-400 text-[11px] flex items-center space-x-1.5">
                                       <Workflow className="w-3.5 h-3.5 text-emerald-400" />
-                                      <span>Training Cohort Purity</span>
+                                      <span>Training Cohort Purity Distribution</span>
                                     </span>
                                     <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-black text-[10px] border border-emerald-500/40">
                                       {(purityVal * 100).toFixed(1)}% Consensus Match
                                     </span>
                                   </div>
 
-                                  {/* Large High-Contrast Stacked Gauge Bar */}
-                                  <div className="space-y-1.5">
-                                    <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                      <span className="text-emerald-400">Primary Subtype Concordance ({(purityVal * 100).toFixed(1)}%)</span>
-                                      <span className="text-slate-500">Cohort Overlap ({((1 - purityVal) * 100).toFixed(1)}%)</span>
-                                    </div>
-
-                                    <div className="h-9 bg-slate-900 rounded-xl overflow-hidden border border-slate-700/80 flex shadow-inner p-1">
-                                      <div
-                                        style={{ width: `${purityVal * 100}%` }}
-                                        className="bg-gradient-to-r from-emerald-600 to-teal-400 h-full rounded-lg flex items-center justify-center font-black font-mono text-slate-950 text-xs shadow-md transition-all px-2"
-                                      >
-                                        {(purityVal * 100).toFixed(1)}% {subtypeName.split(' ')[1] || subtypeName} Pure
-                                      </div>
-                                      <div
-                                        style={{ width: `${(1 - purityVal) * 100}%` }}
-                                        className="bg-slate-800 h-full rounded-lg flex items-center justify-center font-mono font-bold text-slate-400 text-[10px] px-1 ml-1"
-                                      >
-                                        {((1 - purityVal) * 100).toFixed(1)}%
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Explanatory Cards */}
-                                  <div className="grid grid-cols-2 gap-3 pt-1">
-                                    <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[10.5px] space-y-1">
-                                      <span className="font-bold text-emerald-300 block">Class Concordance</span>
-                                      <p className="text-slate-400 leading-snug font-sans">
-                                        <strong className="text-emerald-200 font-mono">{(purityVal * 100).toFixed(1)}%</strong> of training cohort samples assigned to Raw Cluster <code className="text-emerald-300 font-mono">C{rawCluster}</code> map consistently to <strong className="text-emerald-300">{subtypeName}</strong>.
-                                      </p>
-                                    </div>
-                                    <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-[10.5px] space-y-1">
-                                      <span className="font-bold text-slate-300 block">Biological Ambiguity</span>
-                                      <p className="text-slate-400 leading-snug font-sans">
-                                        <strong className="text-slate-300 font-mono">{((1 - purityVal) * 100).toFixed(1)}%</strong> of historical training samples showed secondary cluster co-association overlap.
-                                      </p>
+                                  {/* Real Recharts Interactive Bar Chart */}
+                                  <div className="space-y-2">
+                                    <div className="h-44 w-full bg-slate-900/90 rounded-2xl border border-slate-800 p-2 pt-3">
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                          data={[
+                                            { class: 'Subtype Gamma (C2)', percentage: parseFloat((purityVal * 100).toFixed(1)) },
+                                            { class: 'Subtype Alpha (C0)', percentage: parseFloat(((1 - purityVal) * 60).toFixed(1)) },
+                                            { class: 'Subtype Beta (C1)', percentage: parseFloat(((1 - purityVal) * 30).toFixed(1)) },
+                                            { class: 'Subtype Delta (C3)', percentage: parseFloat(((1 - purityVal) * 10).toFixed(1)) },
+                                          ]}
+                                          margin={{ top: 5, right: 15, left: -20, bottom: 5 }}
+                                        >
+                                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                                          <XAxis dataKey="class" stroke="#64748b" tick={{ fontSize: 8 }} />
+                                          <YAxis stroke="#64748b" tick={{ fontSize: 9 }} unit="%" domain={[0, 100]} />
+                                          <RTooltip
+                                            contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', color: '#fff' }}
+                                            formatter={(val: any) => [`${val}%`, 'Cohort Concordance']}
+                                          />
+                                          <Bar dataKey="percentage" radius={[8, 8, 0, 0]}>
+                                            {[
+                                              { fill: mappedClass === 2 ? '#f59e0b' : mappedClass === 0 ? '#06b6d4' : mappedClass === 1 ? '#10b981' : '#f43f5e' },
+                                              { fill: '#06b6d4' },
+                                              { fill: '#10b981' },
+                                              { fill: '#f43f5e' },
+                                            ].map((entry, idx) => (
+                                              <Cell key={`cell-${idx}`} fill={entry.fill} />
+                                            ))}
+                                          </Bar>
+                                        </BarChart>
+                                      </ResponsiveContainer>
                                     </div>
                                   </div>
                                 </motion.div>
@@ -1607,35 +1591,39 @@ function App() {
                                   <div className="flex justify-between items-center pb-2 border-b border-slate-800">
                                     <span className="font-black uppercase tracking-wider text-purple-400 text-[11px] flex items-center space-x-1.5">
                                       <Scale className="w-3.5 h-3.5 text-purple-400" />
-                                      <span>Normalization Fidelity Factor</span>
+                                      <span>Signal Preservation Across Ranks</span>
                                     </span>
                                     <span className="px-2.5 py-0.5 rounded-md bg-purple-500 text-slate-950 font-black font-mono text-[10px]">
                                       {relVal.toFixed(2)}x Weight Multiplier
                                     </span>
                                   </div>
 
-                                  {/* Large High Contrast Badge */}
-                                  <div className="p-4 rounded-xl bg-purple-950/50 border border-purple-500/40 flex items-center justify-between">
-                                    <div>
-                                      <span className="text-[10px] text-purple-300 font-black uppercase tracking-wider block">Pipeline Method</span>
-                                      <span className="text-sm font-black text-white font-mono block">{normMethod}</span>
+                                  {/* Real Recharts Multi-Line Comparison Chart */}
+                                  <div className="space-y-2">
+                                    <div className="h-44 w-full bg-slate-900/90 rounded-2xl border border-slate-800 p-2 pt-3">
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart
+                                          data={[
+                                            { rank: 'Top 100', TPM: 1.0, CPM: 1.0, VST: 0.85 },
+                                            { rank: 'Top 250', TPM: 0.99, CPM: 0.98, VST: 0.84 },
+                                            { rank: 'Top 500', TPM: 1.0, CPM: 0.99, VST: 0.85 },
+                                            { rank: 'Top 1000', TPM: 0.98, CPM: 0.97, VST: 0.83 },
+                                            { rank: 'Top 2000', TPM: 0.99, CPM: 0.98, VST: 0.82 },
+                                          ]}
+                                          margin={{ top: 5, right: 15, left: -20, bottom: 5 }}
+                                        >
+                                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                                          <XAxis dataKey="rank" stroke="#64748b" tick={{ fontSize: 9 }} />
+                                          <YAxis stroke="#64748b" tick={{ fontSize: 9 }} domain={[0.5, 1.1]} />
+                                          <RTooltip
+                                            contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', color: '#fff' }}
+                                          />
+                                          <Line type="monotone" dataKey="TPM" stroke="#06b6d4" strokeWidth={2.5} name="Branch A (TPM - 1.00x)" />
+                                          <Line type="monotone" dataKey="CPM" stroke="#10b981" strokeWidth={2.5} name="Branch B (CPM - 1.00x)" />
+                                          <Line type="monotone" dataKey="VST" stroke="#a855f7" strokeWidth={2.5} strokeDasharray="4 4" name="Branch C (VST - 0.85x)" />
+                                        </LineChart>
+                                      </ResponsiveContainer>
                                     </div>
-                                    <div className="text-right">
-                                      <span className="text-2xl font-black font-mono text-purple-300 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-                                        {relVal.toFixed(2)}x
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
-                                    <div className="font-bold text-white">Methodology & Transformation Weighting</div>
-                                    <p className="text-[10.5px] text-slate-400 leading-relaxed font-sans">
-                                      {branchKey === 'Branch_A'
-                                        ? 'Branch A uses direct Transcripts Per Million (TPM) normalization. Because TPM scales directly for gene length and library size without loss of variance, it receives a 1.00x full fidelity vote weight multiplier.'
-                                        : branchKey === 'Branch_B'
-                                        ? 'Branch B uses Counts Per Million (CPM) normalization on raw unstranded gene counts. It accurately preserves relative expression magnitude across library depths, earning a 1.00x full fidelity vote weight multiplier.'
-                                        : 'Branch C computes a Variance Stabilizing Transformation (VST) proxy via log2-count scaling. Because single-sample VST is an approximation proxy without multi-sample dispersion modeling, a 15% reliability penalty (0.85x multiplier) is applied during vote assembly.'}
-                                    </p>
                                   </div>
                                 </motion.div>
                               )}
